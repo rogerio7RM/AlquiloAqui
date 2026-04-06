@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alquilo Aqui | Alquiler de coches y furgonetas</title>
+  <title>Alquilo Aqui | Catalogo con disponibilidad y reserva por WhatsApp</title>
   <meta
     name="description"
-    content="Alquilo Aqui ofrece alquiler de coches y furgonetas con atencion directa por telefono. Reserva llamando al 604 98 26 25."
+    content="Catalogo web de Alquilo Aqui con vehiculos disponibles y no disponibles, bloqueo de fechas y contacto directo por WhatsApp."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,124 +15,415 @@
     rel="stylesheet"
   >
   <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="site-header">
-      <a class="brand" href="#inicio">Alquilo Aqui</a>
+      <a class="brand" href="#inicio" aria-label="Ir al inicio de Alquilo Aqui">
+        <img src="assets/logo-alquilo-aqui.png" alt="Logo de Alquilo Aqui">
+        <span>
+          <small>Alquiler directo</small>
+          <strong>Alquilo Aqui</strong>
+        </span>
+      </a>
+
       <nav class="site-nav" aria-label="Navegacion principal">
-        <a href="#vehiculos">Vehiculos</a>
-        <a href="#ventajas">Ventajas</a>
-        <a href="#contacto">Contacto</a>
+        <a href="#catalogo">Vehiculos</a>
+        <a href="#proceso">Como funciona</a>
+        <a href="#gestion-rapida">Gestion</a>
+        <button class="nav-admin" type="button" data-open-admin>Acceso gestion</button>
       </nav>
     </header>
 
     <main id="inicio">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Alquiler de coches y furgonetas</p>
-          <h1>Tu vehiculo cuando lo necesitas, sin vueltas.</h1>
+          <p class="eyebrow">Estilo Amovens, flujo directo por WhatsApp</p>
+          <h1>Alquila coches y furgonetas sin crear cuenta.</h1>
           <p class="hero-text">
-            En Alquilo Aqui te ayudamos a encontrar coche o furgo para escapadas,
-            trabajo, mudanzas ligeras y trayectos del dia a dia. Hablas con
-            nosotros directamente y resolvemos tu reserva por telefono.
+            Esta version para Alquilo Aqui muestra el catalogo completo, deja ver
+            que vehiculos estan libres o bloqueados y lleva toda la conversacion
+            al chat de WhatsApp.
           </p>
+
           <div class="cta-group">
-            <a class="button button-primary" href="tel:+34604982625">Llamar al 604 98 26 25</a>
-            <a class="button button-secondary" href="https://wa.me/34604982625" target="_blank" rel="noreferrer">Escribir por WhatsApp</a>
+            <a
+              class="button button-primary"
+              id="heroWhatsappLink"
+              href="https://wa.me/34604982625"
+              target="_blank"
+              rel="noreferrer"
+            >Hablar por WhatsApp</a>
+            <a class="button button-secondary" href="#catalogo">Ver catalogo</a>
           </div>
-          <ul class="hero-points" aria-label="Puntos destacados">
-            <li>Atencion directa y cercana</li>
-            <li>Opciones para ocio, trabajo y viajes</li>
-            <li>Consulta disponibilidad en una sola llamada</li>
+
+          <ul class="hero-points" aria-label="Puntos clave">
+            <li>Alta y baja de vehiculos desde la propia web</li>
+            <li>Clave de gestion para proteger el panel administrativo</li>
+            <li>Calendario por vehiculo con bloqueo manual de fechas</li>
           </ul>
         </div>
 
-        <aside class="hero-card" aria-label="Resumen de servicio">
-          <img
-            class="hero-logo"
-            src="assets/logo-alquilo-aqui.png"
-            alt="Logo de Alquilo Aqui alquiler furgo y coche"
-          >
-          <div class="hero-card-content">
-            <p class="card-label">Reserva rapida</p>
-            <h2>Coches y furgonetas con trato directo.</h2>
-            <p>
-              Cuentanos que necesitas y te ayudamos a encontrar la opcion adecuada
-              de forma sencilla y sin formularios largos.
-            </p>
+        <aside class="hero-panel" aria-label="Buscador de disponibilidad">
+          <p class="card-label">Consulta rapida</p>
+          <h2>Filtra por fechas y marca disponibilidad real en segundos.</h2>
+
+          <form class="search-panel" id="searchForm">
+            <label>
+              <span>Desde</span>
+              <input id="filterStart" type="date">
+            </label>
+            <label>
+              <span>Hasta</span>
+              <input id="filterEnd" type="date">
+            </label>
+            <label>
+              <span>Tipo</span>
+              <select id="filterType">
+                <option value="all">Todos</option>
+                <option value="coche">Coches</option>
+                <option value="suv">SUV</option>
+                <option value="furgoneta">Furgonetas</option>
+              </select>
+            </label>
+            <button class="button button-primary" type="submit">Aplicar busqueda</button>
+          </form>
+
+          <div class="hero-stats" aria-label="Resumen del catalogo">
+            <article class="stat-card">
+              <strong id="statTotal">0</strong>
+              <span>vehiculos en catalogo</span>
+            </article>
+            <article class="stat-card">
+              <strong id="statAvailable">0</strong>
+              <span>disponibles</span>
+            </article>
+            <article class="stat-card">
+              <strong id="statUnavailable">0</strong>
+              <span>no disponibles</span>
+            </article>
           </div>
+
+          <p class="hero-note">
+            No hay area de login para clientes. La reserva final se conversa y se
+            confirma por WhatsApp.
+          </p>
         </aside>
       </section>
 
-      <section class="info-grid" id="vehiculos">
-        <article class="info-card">
-          <p class="card-label">Coches</p>
-          <h2>Para escapadas, ciudad y trayectos diarios</h2>
-          <p>
-            Una solucion practica para moverte con comodidad, ya sea por unos dias
-            o para resolver desplazamientos puntuales.
-          </p>
-        </article>
-        <article class="info-card">
-          <p class="card-label">Furgonetas</p>
-          <h2>Espacio extra para trabajo o transporte</h2>
-          <p>
-            Ideal para pequenas mudanzas, reparto, material de trabajo o cualquier
-            necesidad que requiera mas capacidad.
-          </p>
-        </article>
-        <article class="info-card">
-          <p class="card-label">Contacto</p>
-          <h2>Atencion rapida por telefono</h2>
-          <p>
-            Llamanos al <a href="tel:+34604982625">604 98 26 25</a> y te contamos
-            disponibilidad, condiciones y opciones de alquiler.
-          </p>
-        </article>
-      </section>
-
-      <section class="benefits" id="ventajas">
+      <section class="catalog-section" id="catalogo">
         <div class="section-heading">
-          <p class="eyebrow">Por que elegirnos</p>
-          <h2>Una web clara para contactar rapido y alquilar sin complicaciones</h2>
+          <p class="eyebrow">Catalogo visible</p>
+          <h2>Todos los vehiculos, tambien los no disponibles.</h2>
+          <p>
+            El visitante ve los coches y furgonetas activos, entiende si el
+            vehiculo esta libre en sus fechas y puede pasar al chat con un solo
+            clic.
+          </p>
         </div>
-        <div class="benefit-list">
-          <article class="benefit">
-            <span class="benefit-number">01</span>
-            <h3>Trato cercano</h3>
-            <p>Hablas directamente con nosotros para resolver dudas y cerrar tu reserva.</p>
+
+        <div class="catalog-toolbar">
+          <label>
+            <span>Buscar</span>
+            <input id="searchInput" type="search" placeholder="Modelo, ciudad o rasgo">
+          </label>
+          <label>
+            <span>Estado</span>
+            <select id="availabilityFilter">
+              <option value="all">Todos</option>
+              <option value="available">Solo disponibles</option>
+              <option value="unavailable">Solo no disponibles</option>
+            </select>
+          </label>
+          <button class="button button-secondary toolbar-button" id="resetFiltersBtn" type="button">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div class="fleet-grid" id="fleetGrid" aria-live="polite"></div>
+        <p class="empty-state hidden" id="emptyState">
+          No hay vehiculos que coincidan con los filtros actuales.
+        </p>
+      </section>
+
+      <section class="process-section" id="proceso">
+        <div class="section-heading">
+          <p class="eyebrow">Como funciona</p>
+          <h2>Una experiencia simple para el cliente y rapida para gestion interna.</h2>
+        </div>
+
+        <div class="process-grid">
+          <article class="process-card">
+            <span class="process-number">01</span>
+            <h3>Elige fechas</h3>
+            <p>El usuario filtra por rango de fechas o revisa el estado actual del catalogo.</p>
           </article>
-          <article class="benefit">
-            <span class="benefit-number">02</span>
-            <h3>Respuesta agil</h3>
-            <p>La idea es que puedas saber rapido si hay disponibilidad para lo que necesitas.</p>
+          <article class="process-card">
+            <span class="process-number">02</span>
+            <h3>Ve el estado real</h3>
+            <p>Los vehiculos bloqueados siguen visibles, pero marcados como no disponibles.</p>
           </article>
-          <article class="benefit">
-            <span class="benefit-number">03</span>
-            <h3>Opciones versatiles</h3>
-            <p>Coches y furgonetas para planes personales, trabajo o transporte puntual.</p>
+          <article class="process-card">
+            <span class="process-number">03</span>
+            <h3>Habla por WhatsApp</h3>
+            <p>El trigger principal envia al chat con un mensaje listo para cerrar la reserva.</p>
           </article>
         </div>
       </section>
 
-      <section class="contact-panel" id="contacto">
-        <div class="contact-copy">
-          <p class="eyebrow">Contacto</p>
-          <h2>Reserva por telefono en pocos minutos</h2>
+      <section class="ops-section" id="gestion-rapida">
+        <div class="ops-copy">
+          <p class="eyebrow">Gestion web</p>
+          <h2>Panel protegido para mover inventario y disponibilidad sin tocar codigo.</h2>
           <p>
-            Si necesitas informacion, disponibilidad o condiciones de alquiler,
-            ponte en contacto con Alquilo Aqui y te atenderemos directamente.
+            Desde el panel puedes insertar o retirar vehiculos, cambiar el numero
+            de WhatsApp, actualizar la clave y bloquear fechas por coche o
+            furgoneta.
           </p>
         </div>
-        <a class="contact-phone" href="tel:+34604982625">604 98 26 25</a>
+
+        <div class="ops-card">
+          <h3>Incluye</h3>
+          <ul class="ops-list">
+            <li>Alta, edicion y borrado de vehiculos</li>
+            <li>Calendario visual con fechas bloqueadas</li>
+            <li>Panel protegido por clave de gestion</li>
+            <li>CTA flotante y botones de reserva por WhatsApp</li>
+          </ul>
+          <button class="button button-primary" type="button" data-open-admin>
+            Abrir panel de gestion
+          </button>
+        </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>Alquilo Aqui - Alquiler de coches y furgonetas</p>
-      <a href="tel:+34604982625">604 98 26 25</a>
+      <div>
+        <p>Alquilo Aqui</p>
+        <small>Catalogo publico, disponibilidad marcada y cierre por WhatsApp.</small>
+      </div>
+      <div class="footer-actions">
+        <a
+          class="footer-link"
+          id="footerWhatsappLink"
+          href="https://wa.me/34604982625"
+          target="_blank"
+          rel="noreferrer"
+        >WhatsApp</a>
+        <button class="footer-admin" type="button" data-open-admin>Gestion</button>
+      </div>
     </footer>
   </div>
+
+  <a
+    class="floating-whatsapp"
+    id="floatingWhatsappLink"
+    href="https://wa.me/34604982625"
+    target="_blank"
+    rel="noreferrer"
+  >Reservar por WhatsApp</a>
+
+  <section class="modal hidden" id="adminLoginModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-login></div>
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close-login aria-label="Cerrar acceso">
+        Cerrar
+      </button>
+      <p class="card-label">Acceso protegido</p>
+      <h2>Gestion del catalogo</h2>
+      <p>
+        Usa la clave de gestion para editar vehiculos, bloquear fechas y ajustar
+        el boton de WhatsApp.
+      </p>
+
+      <form class="stack-form" id="adminLoginForm">
+        <label>
+          <span>Clave de gestion</span>
+          <input id="adminPasswordInput" type="password" required placeholder="Introduce la clave">
+        </label>
+        <button class="button button-primary" type="submit">Entrar al panel</button>
+      </form>
+
+      <p class="helper-text" id="adminLoginMessage">
+        Solo el administrador necesita acceso. Los clientes no crean cuenta.
+      </p>
+    </div>
+  </section>
+
+  <section class="modal hidden" id="adminPanelModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-panel></div>
+    <div class="admin-panel">
+      <header class="admin-header">
+        <div>
+          <p class="card-label">Panel de gestion</p>
+          <h2>Vehiculos, fechas y CTA</h2>
+        </div>
+        <div class="admin-header-actions">
+          <button class="button button-secondary small-button" id="adminLogoutBtn" type="button">
+            Cerrar sesion
+          </button>
+          <button class="modal-close" type="button" data-close-panel aria-label="Cerrar panel">
+            Cerrar
+          </button>
+        </div>
+      </header>
+
+      <div class="admin-grid">
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <h3>Configuracion rapida</h3>
+            <p>Cambia el numero de WhatsApp y actualiza la clave de gestion.</p>
+          </div>
+
+          <form class="stack-form" id="settingsForm">
+            <label>
+              <span>Numero de WhatsApp</span>
+              <input id="settingsWhatsapp" type="tel" placeholder="34604982625">
+            </label>
+            <label>
+              <span>Nueva clave de gestion</span>
+              <input id="settingsPassword" type="password" placeholder="Deja vacio para mantenerla">
+            </label>
+            <button class="button button-primary" type="submit">Guardar configuracion</button>
+          </form>
+
+          <p class="helper-text" id="settingsMessage"></p>
+        </section>
+
+        <section class="admin-section">
+          <div class="admin-section-head">
+            <h3>Ficha de vehiculo</h3>
+            <p>Da de alta, edita o retira coches y furgonetas sin tocar el HTML.</p>
+          </div>
+
+          <form class="stack-form" id="vehicleForm">
+            <input id="vehicleId" type="hidden">
+            <label>
+              <span>Nombre comercial</span>
+              <input id="vehicleName" type="text" required placeholder="Ej. Citroen Berlingo XL">
+            </label>
+            <div class="split-fields">
+              <label>
+                <span>Tipo</span>
+                <select id="vehicleType">
+                  <option value="coche">Coche</option>
+                  <option value="suv">SUV</option>
+                  <option value="furgoneta">Furgoneta</option>
+                </select>
+              </label>
+              <label>
+                <span>Precio por dia</span>
+                <input id="vehiclePrice" type="number" min="1" step="1" required placeholder="54">
+              </label>
+            </div>
+            <div class="split-fields">
+              <label>
+                <span>Ciudad</span>
+                <input id="vehicleLocation" type="text" required placeholder="Madrid centro">
+              </label>
+              <label>
+                <span>Plazas</span>
+                <input id="vehiclePassengers" type="number" min="1" step="1" required placeholder="5">
+              </label>
+            </div>
+            <div class="split-fields">
+              <label>
+                <span>Transmision</span>
+                <input id="vehicleTransmission" type="text" required placeholder="Manual o automatica">
+              </label>
+              <label>
+                <span>Combustible</span>
+                <input id="vehicleFuel" type="text" required placeholder="Gasolina, diesel, hibrido">
+              </label>
+            </div>
+            <label>
+              <span>Imagen URL</span>
+              <input id="vehicleImage" type="url" placeholder="https://...">
+            </label>
+            <label>
+              <span>Descripcion corta</span>
+              <textarea id="vehicleSummary" rows="3" placeholder="Ideal para escapadas, ciudad o reparto ligero."></textarea>
+            </label>
+            <label>
+              <span>Rasgos destacados</span>
+              <input id="vehicleFeatures" type="text" placeholder="Bluetooth, Aire, Maletero amplio">
+            </label>
+
+            <div class="inline-actions">
+              <button class="button button-primary" type="submit">Guardar vehiculo</button>
+              <button class="button button-secondary" id="cancelVehicleEditBtn" type="button">
+                Limpiar
+              </button>
+            </div>
+          </form>
+
+          <p class="helper-text" id="vehicleFormMessage"></p>
+        </section>
+
+        <section class="admin-section admin-section-wide">
+          <div class="admin-section-head">
+            <h3>Vehiculos cargados</h3>
+            <p>Revisa el inventario activo y entra a editar o eliminar cada ficha.</p>
+          </div>
+
+          <div class="admin-list" id="adminVehicleList"></div>
+        </section>
+
+        <section class="admin-section admin-section-wide">
+          <div class="admin-section-head">
+            <h3>Calendario y bloqueos</h3>
+            <p>Marca periodos no disponibles y manten el estado publico actualizado.</p>
+          </div>
+
+          <div class="calendar-controls">
+            <label>
+              <span>Vehiculo</span>
+              <select id="blockVehicleSelect"></select>
+            </label>
+
+            <form class="range-form" id="blockForm">
+              <label>
+                <span>Desde</span>
+                <input id="blockStart" type="date" required>
+              </label>
+              <label>
+                <span>Hasta</span>
+                <input id="blockEnd" type="date" required>
+              </label>
+              <label>
+                <span>Nota</span>
+                <input id="blockNote" type="text" placeholder="Reserva, taller, limpieza">
+              </label>
+              <button class="button button-primary" type="submit">Bloquear fechas</button>
+            </form>
+          </div>
+
+          <div class="calendar-widget">
+            <div class="calendar-header">
+              <button class="calendar-nav" id="calendarPrevBtn" type="button">Mes anterior</button>
+              <strong id="calendarLabel"></strong>
+              <button class="calendar-nav" id="calendarNextBtn" type="button">Mes siguiente</button>
+            </div>
+
+            <div class="calendar-weekdays">
+              <span>Lun</span>
+              <span>Mar</span>
+              <span>Mie</span>
+              <span>Jue</span>
+              <span>Vie</span>
+              <span>Sab</span>
+              <span>Dom</span>
+            </div>
+
+            <div class="calendar-days" id="calendarDays"></div>
+          </div>
+
+          <div class="block-list" id="blockList"></div>
+          <p class="helper-text" id="blockFormMessage"></p>
+        </section>
+      </div>
+    </div>
+  </section>
 </body>
 </html>

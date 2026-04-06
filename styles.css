@@ -109,72 +109,128 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 16px 22px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(247, 252, 255, 0.82);
+  padding: 18px 24px;
+  border: 1px solid rgba(0, 64, 128, 0.08);
+  border-radius: 30px;
+  background: rgba(247, 252, 255, 0.78);
   box-shadow: var(--shadow-soft);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
   min-width: 0;
 }
 
 .brand img {
-  width: 56px;
-  height: 56px;
+  width: clamp(180px, 22vw, 260px);
+  height: auto;
   object-fit: contain;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 6px;
-  box-shadow: 0 12px 24px rgba(20, 34, 29, 0.1);
 }
 
-.brand span {
-  display: grid;
-}
-
-.brand small {
-  color: var(--muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.brand strong {
-  font-size: 1.1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.site-nav {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.site-nav a {
-  color: var(--muted);
-  font-size: 0.94rem;
-}
-
-.nav-admin,
-.footer-admin {
+.menu-toggle,
+.menu-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid rgba(20, 34, 29, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(0, 64, 128, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
   color: var(--text);
-  font-weight: 700;
   transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.menu-toggle {
+  flex-shrink: 0;
+  gap: 5px;
+  flex-direction: column;
+}
+
+.menu-toggle span,
+.menu-close span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--surface-dark);
+}
+
+.menu-close {
+  position: relative;
+  background: rgba(0, 64, 128, 0.08);
+}
+
+.menu-close span {
+  position: absolute;
+}
+
+.menu-close span:first-child {
+  transform: rotate(45deg);
+}
+
+.menu-close span:last-child {
+  transform: rotate(-45deg);
+}
+
+.menu-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+}
+
+.menu-backdrop {
+  background: rgba(5, 28, 59, 0.32);
+}
+
+.menu-panel {
+  display: grid;
+  align-content: start;
+  gap: 26px;
+  height: 100%;
+  padding: 24px;
+  border-left: 1px solid rgba(0, 64, 128, 0.08);
+  background:
+    linear-gradient(180deg, rgba(252, 255, 255, 0.98), rgba(232, 245, 250, 0.96)),
+    var(--surface-strong);
+  box-shadow: -24px 0 60px rgba(0, 64, 128, 0.12);
+}
+
+.menu-panel-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.menu-panel-top img {
+  width: min(210px, 100%);
+  height: auto;
+}
+
+.menu-links,
+.menu-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.menu-link {
+  padding: 14px 16px;
+  border-radius: 18px;
+  color: var(--surface-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: rgba(0, 64, 128, 0.05);
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.menu-link:hover,
+.menu-link:focus-visible {
+  transform: translateX(4px);
+  background: rgba(0, 64, 128, 0.08);
 }
 
 .hero {
@@ -255,8 +311,8 @@ h1 {
 
 .button:hover,
 .button:focus-visible,
-.nav-admin:hover,
-.footer-admin:hover,
+.menu-toggle:hover,
+.menu-close:hover,
 .vehicle-action:hover,
 .floating-whatsapp:hover,
 .calendar-nav:hover {
@@ -433,7 +489,7 @@ textarea:focus-visible {
 
 .catalog-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(190px, 0.7fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   padding: 20px;
   border-radius: var(--radius-lg);
@@ -1034,18 +1090,12 @@ textarea:focus-visible {
 }
 
 @media (max-width: 860px) {
-  .site-header,
   .catalog-toolbar,
   .hero-stats,
   .process-grid,
   .split-fields,
   .site-footer {
     grid-template-columns: 1fr;
-  }
-
-  .site-header,
-  .site-footer {
-    display: grid;
   }
 
   .catalog-toolbar {
@@ -1080,14 +1130,17 @@ textarea:focus-visible {
     padding: 18px;
   }
 
-  .brand,
-  .site-nav {
-    width: 100%;
+  .brand img {
+    width: clamp(160px, 46vw, 220px);
   }
 
-  .site-nav {
-    justify-content: space-between;
-    gap: 12px;
+  .menu-drawer {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-panel {
+    margin-left: auto;
+    width: min(100%, 360px);
   }
 
   h1 {
@@ -1107,8 +1160,6 @@ textarea:focus-visible {
   .button,
   .vehicle-action,
   .footer-link,
-  .nav-admin,
-  .footer-admin,
   .mini-button,
   .calendar-nav {
     width: 100%;

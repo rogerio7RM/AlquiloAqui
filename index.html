@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alquilo Aqui | Catalogo con disponibilidad y reserva por WhatsApp</title>
+  <title>Alquilo Aqui | Catalogo y reserva por WhatsApp</title>
   <meta
     name="description"
-    content="Catalogo web de Alquilo Aqui con vehiculos disponibles y no disponibles, bloqueo de fechas y contacto directo por WhatsApp."
+    content="Catalogo web de Alquilo Aqui con bloqueo de fechas y contacto directo por WhatsApp."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,30 +21,60 @@
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="#inicio" aria-label="Ir al inicio de Alquilo Aqui">
-        <img src="assets/logo-alquilo-aqui.png" alt="Logo de Alquilo Aqui">
-        <span>
-          <small>Alquiler directo</small>
-          <strong>Alquilo Aqui</strong>
-        </span>
+        <img src="assets/logo-alquilo-aqui-transparent.png" alt="Logo de Alquilo Aqui">
       </a>
-
-      <nav class="site-nav" aria-label="Navegacion principal">
-        <a href="#catalogo">Vehiculos</a>
-        <a href="#proceso">Como funciona</a>
-        <a href="#gestion-rapida">Gestion</a>
-        <button class="nav-admin" type="button" data-open-admin>Acceso gestion</button>
-      </nav>
+      <button
+        class="menu-toggle"
+        id="menuToggle"
+        type="button"
+        aria-controls="siteMenu"
+        aria-expanded="false"
+        aria-label="Abrir menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </header>
+
+    <section class="menu-drawer hidden" id="siteMenu" aria-hidden="true">
+      <div class="menu-backdrop" data-close-menu></div>
+      <nav class="menu-panel" aria-label="Menu principal">
+        <div class="menu-panel-top">
+          <img src="assets/logo-alquilo-aqui-transparent.png" alt="Alquilo Aqui">
+          <button class="menu-close" type="button" data-close-menu aria-label="Cerrar menu">
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        <div class="menu-links">
+          <a class="menu-link" href="#inicio" data-menu-link>Inicio</a>
+          <a class="menu-link" href="#catalogo" data-menu-link>Catalogo</a>
+          <a class="menu-link" href="#proceso" data-menu-link>Como reservar</a>
+        </div>
+
+        <div class="menu-actions">
+          <a
+            class="button button-primary"
+            id="menuWhatsappLink"
+            href="https://wa.me/34604982625"
+            target="_blank"
+            rel="noreferrer"
+          >WhatsApp</a>
+          <button class="button button-secondary" type="button" data-open-admin>Gestion</button>
+        </div>
+      </nav>
+    </section>
 
     <main id="inicio">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Estilo Amovens, flujo directo por WhatsApp</p>
-          <h1>Alquila coches y furgonetas sin crear cuenta.</h1>
+          <p class="eyebrow">Alquiler directo</p>
+          <h1>Alquiler de furgonetas y coches.</h1>
           <p class="hero-text">
-            Esta version para Alquilo Aqui muestra el catalogo completo, deja ver
-            que vehiculos estan libres o bloqueados y lleva toda la conversacion
-            al chat de WhatsApp.
+            Consulta el catalogo, revisa cada ficha y reserva por WhatsApp de
+            forma rapida.
           </p>
 
           <div class="cta-group">
@@ -59,15 +89,15 @@
           </div>
 
           <ul class="hero-points" aria-label="Puntos clave">
-            <li>Alta y baja de vehiculos desde la propia web</li>
-            <li>Clave de gestion para proteger el panel administrativo</li>
-            <li>Calendario por vehiculo con bloqueo manual de fechas</li>
+            <li>Consulta por fechas</li>
+            <li>Informacion clara en cada ficha</li>
+            <li>Reserva directa por WhatsApp</li>
           </ul>
         </div>
 
-        <aside class="hero-panel" aria-label="Buscador de disponibilidad">
-          <p class="card-label">Consulta rapida</p>
-          <h2>Filtra por fechas y marca disponibilidad real en segundos.</h2>
+        <aside class="hero-panel" aria-label="Filtros del catalogo">
+          <p class="card-label">Busqueda rapida</p>
+          <h2>Elige fechas y el tipo de vehiculo.</h2>
 
           <form class="search-panel" id="searchForm">
             <label>
@@ -87,39 +117,18 @@
                 <option value="furgoneta">Furgonetas</option>
               </select>
             </label>
-            <button class="button button-primary" type="submit">Aplicar busqueda</button>
+            <button class="button button-primary" type="submit">Aplicar filtros</button>
           </form>
-
-          <div class="hero-stats" aria-label="Resumen del catalogo">
-            <article class="stat-card">
-              <strong id="statTotal">0</strong>
-              <span>vehiculos en catalogo</span>
-            </article>
-            <article class="stat-card">
-              <strong id="statAvailable">0</strong>
-              <span>disponibles</span>
-            </article>
-            <article class="stat-card">
-              <strong id="statUnavailable">0</strong>
-              <span>no disponibles</span>
-            </article>
-          </div>
-
-          <p class="hero-note">
-            No hay area de login para clientes. La reserva final se conversa y se
-            confirma por WhatsApp.
-          </p>
         </aside>
       </section>
 
       <section class="catalog-section" id="catalogo">
         <div class="section-heading">
-          <p class="eyebrow">Catalogo visible</p>
-          <h2>Todos los vehiculos, tambien los no disponibles.</h2>
+          <p class="eyebrow">Vehiculos</p>
+          <h2>Catalogo</h2>
           <p>
-            El visitante ve los coches y furgonetas activos, entiende si el
-            vehiculo esta libre en sus fechas y puede pasar al chat con un solo
-            clic.
+            Busca por modelo, ciudad o rasgo y entra en WhatsApp cuando
+            encuentres el vehiculo que necesitas.
           </p>
         </div>
 
@@ -127,14 +136,6 @@
           <label>
             <span>Buscar</span>
             <input id="searchInput" type="search" placeholder="Modelo, ciudad o rasgo">
-          </label>
-          <label>
-            <span>Estado</span>
-            <select id="availabilityFilter">
-              <option value="all">Todos</option>
-              <option value="available">Solo disponibles</option>
-              <option value="unavailable">Solo no disponibles</option>
-            </select>
           </label>
           <button class="button button-secondary toolbar-button" id="resetFiltersBtn" type="button">
             Limpiar filtros
@@ -149,51 +150,26 @@
 
       <section class="process-section" id="proceso">
         <div class="section-heading">
-          <p class="eyebrow">Como funciona</p>
-          <h2>Una experiencia simple para el cliente y rapida para gestion interna.</h2>
+          <p class="eyebrow">Como reservar</p>
+          <h2>Un proceso claro y directo.</h2>
         </div>
 
         <div class="process-grid">
           <article class="process-card">
             <span class="process-number">01</span>
             <h3>Elige fechas</h3>
-            <p>El usuario filtra por rango de fechas o revisa el estado actual del catalogo.</p>
+            <p>Filtra el catalogo por fechas y revisa el tipo de vehiculo que necesitas.</p>
           </article>
           <article class="process-card">
             <span class="process-number">02</span>
-            <h3>Ve el estado real</h3>
-            <p>Los vehiculos bloqueados siguen visibles, pero marcados como no disponibles.</p>
+            <h3>Revisa la ficha</h3>
+            <p>Mira la informacion de cada coche o furgoneta y su estado en la propia foto.</p>
           </article>
           <article class="process-card">
             <span class="process-number">03</span>
             <h3>Habla por WhatsApp</h3>
-            <p>El trigger principal envia al chat con un mensaje listo para cerrar la reserva.</p>
+            <p>Abre el chat con un mensaje listo para consultar y cerrar la reserva.</p>
           </article>
-        </div>
-      </section>
-
-      <section class="ops-section" id="gestion-rapida">
-        <div class="ops-copy">
-          <p class="eyebrow">Gestion web</p>
-          <h2>Panel protegido para mover inventario y disponibilidad sin tocar codigo.</h2>
-          <p>
-            Desde el panel puedes insertar o retirar vehiculos, cambiar el numero
-            de WhatsApp, actualizar la clave y bloquear fechas por coche o
-            furgoneta.
-          </p>
-        </div>
-
-        <div class="ops-card">
-          <h3>Incluye</h3>
-          <ul class="ops-list">
-            <li>Alta, edicion y borrado de vehiculos</li>
-            <li>Calendario visual con fechas bloqueadas</li>
-            <li>Panel protegido por clave de gestion</li>
-            <li>CTA flotante y botones de reserva por WhatsApp</li>
-          </ul>
-          <button class="button button-primary" type="button" data-open-admin>
-            Abrir panel de gestion
-          </button>
         </div>
       </section>
     </main>
@@ -201,7 +177,7 @@
     <footer class="site-footer">
       <div>
         <p>Alquilo Aqui</p>
-        <small>Catalogo publico, disponibilidad marcada y cierre por WhatsApp.</small>
+        <small>Catalogo online con contacto directo por WhatsApp.</small>
       </div>
       <div class="footer-actions">
         <a
@@ -211,7 +187,6 @@
           target="_blank"
           rel="noreferrer"
         >WhatsApp</a>
-        <button class="footer-admin" type="button" data-open-admin>Gestion</button>
       </div>
     </footer>
   </div>
@@ -373,7 +348,7 @@
         <section class="admin-section admin-section-wide">
           <div class="admin-section-head">
             <h3>Calendario y bloqueos</h3>
-            <p>Marca periodos no disponibles y manten el estado publico actualizado.</p>
+            <p>Marca periodos ocupados y manten el estado publico actualizado.</p>
           </div>
 
           <div class="calendar-controls">

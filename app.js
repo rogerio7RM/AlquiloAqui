@@ -24,23 +24,21 @@ function init() {
   bindAdminEvents();
   syncGlobalWhatsappLinks();
   renderPublic();
-  maybeOpenAdminFromHash();
 }
 
 function cacheDom() {
+  refs.menuToggle = document.getElementById("menuToggle");
+  refs.siteMenu = document.getElementById("siteMenu");
   refs.searchForm = document.getElementById("searchForm");
   refs.filterStart = document.getElementById("filterStart");
   refs.filterEnd = document.getElementById("filterEnd");
   refs.filterType = document.getElementById("filterType");
   refs.searchInput = document.getElementById("searchInput");
-  refs.availabilityFilter = document.getElementById("availabilityFilter");
   refs.resetFiltersBtn = document.getElementById("resetFiltersBtn");
   refs.fleetGrid = document.getElementById("fleetGrid");
   refs.emptyState = document.getElementById("emptyState");
-  refs.statTotal = document.getElementById("statTotal");
-  refs.statAvailable = document.getElementById("statAvailable");
-  refs.statUnavailable = document.getElementById("statUnavailable");
   refs.heroWhatsappLink = document.getElementById("heroWhatsappLink");
+  refs.menuWhatsappLink = document.getElementById("menuWhatsappLink");
   refs.footerWhatsappLink = document.getElementById("footerWhatsappLink");
   refs.floatingWhatsappLink = document.getElementById("floatingWhatsappLink");
 
@@ -86,6 +84,34 @@ function cacheDom() {
 }
 
 function bindPublicEvents() {
+  refs.menuToggle.addEventListener("click", () => {
+    const isOpen = !refs.siteMenu.classList.contains("hidden");
+    if (isOpen) {
+      closeMenu();
+      return;
+    }
+
+    openMenu();
+  });
+
+  document.querySelectorAll("[data-close-menu]").forEach((button) => {
+    button.addEventListener("click", closeMenu);
+  });
+
+  document.querySelectorAll("[data-menu-link]").forEach((link) => {
+    link.addEventListener("click", closeMenu);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    closeMenu();
+    closeLoginModal();
+    closeAdminPanel();
+  });
+
   refs.searchForm.addEventListener("submit", (event) => {
     event.preventDefault();
     normalizeFilterRangeInputs();
@@ -101,19 +127,19 @@ function bindPublicEvents() {
   });
 
   refs.searchInput.addEventListener("input", renderPublic);
-  refs.availabilityFilter.addEventListener("change", renderPublic);
 
   refs.resetFiltersBtn.addEventListener("click", () => {
     refs.filterStart.value = "";
     refs.filterEnd.value = "";
     refs.filterType.value = "all";
     refs.searchInput.value = "";
-    refs.availabilityFilter.value = "all";
     renderPublic();
   });
 
   document.querySelectorAll("[data-open-admin]").forEach((button) => {
     button.addEventListener("click", () => {
+      closeMenu();
+
       if (state.ui.isAdminAuthenticated) {
         openAdminPanel();
         return;
@@ -351,12 +377,8 @@ function renderPublic() {
     availability: getVehicleAvailability(vehicle, filters.range)
   }));
 
-  const visibleVehicles = vehiclesWithState.filter(({ vehicle, availability }) => {
+  const visibleVehicles = vehiclesWithState.filter(({ vehicle }) => {
     const matchesType = filters.type === "all" || vehicle.type === filters.type;
-    const matchesAvailability =
-      filters.availability === "all" ||
-      (filters.availability === "available" && availability.isAvailable) ||
-      (filters.availability === "unavailable" && !availability.isAvailable);
     const haystack = [
       vehicle.name,
       vehicle.location,
@@ -366,12 +388,8 @@ function renderPublic() {
     ].join(" ").toLowerCase();
     const matchesSearch = !filters.search || haystack.includes(filters.search);
 
-    return matchesType && matchesAvailability && matchesSearch;
+    return matchesType && matchesSearch;
   });
-
-  refs.statTotal.textContent = String(visibleVehicles.length);
-  refs.statAvailable.textContent = String(visibleVehicles.filter(({ availability }) => availability.isAvailable).length);
-  refs.statUnavailable.textContent = String(visibleVehicles.filter(({ availability }) => !availability.isAvailable).length);
 
   refs.fleetGrid.innerHTML = visibleVehicles.map(({ vehicle, availability }) => renderVehicleCard(vehicle, availability, filters.range)).join("");
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
@@ -785,7 +803,6 @@ function getPublicFilters() {
   return {
     range: normalizeDateRange(refs.filterStart.value, refs.filterEnd.value),
     type: refs.filterType.value,
-    availability: refs.availabilityFilter.value,
     search: refs.searchInput.value.trim().toLowerCase()
   };
 }
@@ -809,36 +826,36 @@ function getVehicleAvailability(vehicle, range) {
 
 function getAvailableHint(availability, range) {
   if (range) {
-    return `Disponible para ${formatDateRange(range.start, range.end)}.`;
+    return `Fechas seleccionadas sin bloqueos: ${formatDateRange(range.start, range.end)}.`;
   }
 
   if (availability.nextBlock) {
-    return `Disponible ahora. Proximo bloqueo ${formatDateRange(availability.nextBlock.start, availability.nextBlock.end)}.`;
+    return `Proximo bloqueo ${formatDateRange(availability.nextBlock.start, availability.nextBlock.end)}.`;
   }
 
-  return "Disponible ahora y sin bloqueos cargados.";
+  return "Sin bloqueos cargados.";
 }
 
 function getUnavailableHint(availability, range) {
   const activeBlock = availability.conflicts[0];
 
   if (!activeBlock) {
-    return "No disponible.";
+    return "Consulta las fechas en la ficha.";
   }
 
   if (range) {
-    return `No disponible para ${formatDateRange(range.start, range.end)}. Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
+    return `Fechas seleccionadas ocupadas. Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
   }
 
-  return `No disponible ahora. Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
+  return `Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
 }
 
 function buildVehicleWhatsappUrl(vehicle, availability, range) {
   const phone = state.data.settings.whatsappNumber;
   const messageParts = [
     `Hola, quiero consultar el ${vehicle.name}.`,
-    range ? `Fechas: ${formatDateRange(range.start, range.end)}.` : "Quiero saber disponibilidad.",
-    availability.isAvailable ? "Lo veo como disponible en la web." : "Lo veo como no disponible y quiero alternativa o fecha libre.",
+    range ? `Fechas: ${formatDateRange(range.start, range.end)}.` : "Quiero saber las fechas libres.",
+    availability.isAvailable ? "La ficha aparece libre en la web." : "La ficha aparece ocupada en la web y quiero una alternativa o una fecha libre.",
     `Precio publicado: ${formatPrice(vehicle.pricePerDay)}.`
   ];
 
@@ -851,14 +868,29 @@ function syncGlobalWhatsappLinks() {
   const url = `https://wa.me/${phone}?text=${message}`;
 
   refs.heroWhatsappLink.href = url;
+  refs.menuWhatsappLink.href = url;
   refs.footerWhatsappLink.href = url;
   refs.floatingWhatsappLink.href = url;
+}
+
+function openMenu() {
+  refs.siteMenu.classList.remove("hidden");
+  refs.siteMenu.setAttribute("aria-hidden", "false");
+  refs.menuToggle.setAttribute("aria-expanded", "true");
+  updateOverlayState();
+}
+
+function closeMenu() {
+  refs.siteMenu.classList.add("hidden");
+  refs.siteMenu.setAttribute("aria-hidden", "true");
+  refs.menuToggle.setAttribute("aria-expanded", "false");
+  updateOverlayState();
 }
 
 function openLoginModal() {
   refs.adminLoginModal.classList.remove("hidden");
   refs.adminLoginModal.setAttribute("aria-hidden", "false");
-  updateBodyModalState();
+  updateOverlayState();
   window.setTimeout(() => refs.adminPasswordInput.focus(), 30);
 }
 
@@ -867,25 +899,28 @@ function closeLoginModal() {
   refs.adminLoginModal.setAttribute("aria-hidden", "true");
   refs.adminPasswordInput.value = "";
   setMessage(refs.adminLoginMessage, "");
-  updateBodyModalState();
+  updateOverlayState();
 }
 
 function openAdminPanel() {
   renderAdmin();
   refs.adminPanelModal.classList.remove("hidden");
   refs.adminPanelModal.setAttribute("aria-hidden", "false");
-  updateBodyModalState();
+  updateOverlayState();
 }
 
 function closeAdminPanel() {
   refs.adminPanelModal.classList.add("hidden");
   refs.adminPanelModal.setAttribute("aria-hidden", "true");
-  updateBodyModalState();
+  updateOverlayState();
 }
 
-function updateBodyModalState() {
-  const hasOpenModal = !refs.adminLoginModal.classList.contains("hidden") || !refs.adminPanelModal.classList.contains("hidden");
-  document.body.classList.toggle("modal-open", hasOpenModal);
+function updateOverlayState() {
+  const hasOpenOverlay =
+    !refs.siteMenu.classList.contains("hidden") ||
+    !refs.adminLoginModal.classList.contains("hidden") ||
+    !refs.adminPanelModal.classList.contains("hidden");
+  document.body.classList.toggle("modal-open", hasOpenOverlay);
 }
 
 function resolveSelectedBlockVehicleId() {
@@ -1052,12 +1087,6 @@ function createVehiclePlaceholder(vehicle) {
   `;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
-function maybeOpenAdminFromHash() {
-  if (window.location.hash === "#gestion") {
-    openLoginModal();
-  }
 }
 
 function setMessage(element, message, type = "") {

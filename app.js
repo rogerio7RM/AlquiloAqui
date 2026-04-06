@@ -1033,21 +1033,21 @@ function createVehiclePlaceholder(vehicle) {
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
       <defs>
         <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#2d7f67" />
-          <stop offset="100%" stop-color="#163229" />
+          <stop offset="0%" stop-color="#20b0c0" />
+          <stop offset="100%" stop-color="#004080" />
         </linearGradient>
       </defs>
       <rect width="800" height="520" fill="url(#bg)" rx="42" />
       <circle cx="686" cy="96" r="84" fill="rgba(255,255,255,0.14)" />
       <circle cx="96" cy="432" r="116" fill="rgba(255,255,255,0.08)" />
       <path d="M200 320c0-22 16-40 38-44l44-8 52-62c12-14 30-22 48-22h106c22 0 42 10 56 28l38 48 58 14c18 4 30 20 30 38v24c0 14-12 26-26 26h-20c-6-32-34-56-68-56-34 0-62 24-68 56H344c-6-32-34-56-68-56-34 0-62 24-68 56h-10c-18 0-32-14-32-32v-10z" fill="rgba(255,255,255,0.2)" />
-      <circle cx="276" cy="370" r="46" fill="#0d1c17" />
-      <circle cx="560" cy="370" r="46" fill="#0d1c17" />
-      <circle cx="276" cy="370" r="20" fill="#f2ede4" />
-      <circle cx="560" cy="370" r="20" fill="#f2ede4" />
-      <text x="64" y="92" fill="#fdf8f1" font-family="Space Grotesk, sans-serif" font-size="26" letter-spacing="4">ALQUILO AQUI</text>
-      <text x="64" y="410" fill="#fdf8f1" font-family="Cormorant Garamond, serif" font-size="56">${title}</text>
-      <text x="64" y="454" fill="#d9ebe4" font-family="Space Grotesk, sans-serif" font-size="22">${type} - ${price}</text>
+      <circle cx="276" cy="370" r="46" fill="#0d2a43" />
+      <circle cx="560" cy="370" r="46" fill="#0d2a43" />
+      <circle cx="276" cy="370" r="20" fill="#edf7fb" />
+      <circle cx="560" cy="370" r="20" fill="#edf7fb" />
+      <text x="64" y="92" fill="#f7fdff" font-family="Space Grotesk, sans-serif" font-size="26" letter-spacing="4">ALQUILO AQUI</text>
+      <text x="64" y="410" fill="#f7fdff" font-family="Cormorant Garamond, serif" font-size="56">${title}</text>
+      <text x="64" y="454" fill="#d8f3f8" font-family="Space Grotesk, sans-serif" font-size="22">${type} - ${price}</text>
     </svg>
   `;
 

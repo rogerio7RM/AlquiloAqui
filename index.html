@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alquilo Aqui | Catalogo y reserva por WhatsApp</title>
+  <title>Alquilo Aqui | Alquiler mensual por WhatsApp</title>
   <meta
     name="description"
-    content="Catalogo web de Alquilo Aqui con bloqueo de fechas y contacto directo por WhatsApp."
+    content="Catalogo web de Alquilo Aqui para alquiler mensual de 1, 3 y 12 meses o mas, con contacto directo por WhatsApp."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,11 +70,11 @@
     <main id="inicio">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Alquiler directo</p>
-          <h1>Alquiler de furgonetas y coches.</h1>
+          <p class="eyebrow">Alquiler mensual</p>
+          <h1>Coches y furgonetas para 1, 3 o 12 meses.</h1>
           <p class="hero-text">
-            Consulta el catalogo, revisa cada ficha y reserva por WhatsApp de
-            forma rapida.
+            Elige la fecha de inicio, selecciona el plazo y consulta por
+            WhatsApp el alquiler mensual que mejor te encaja.
           </p>
 
           <div class="cta-group">
@@ -89,24 +89,28 @@
           </div>
 
           <ul class="hero-points" aria-label="Puntos clave">
-            <li>Consulta por fechas</li>
-            <li>Informacion clara en cada ficha</li>
-            <li>Reserva directa por WhatsApp</li>
+            <li>Plazos de 1 mes, 3 meses y 12 meses o mas</li>
+            <li>Precio mensual visible en cada ficha</li>
+            <li>Consulta directa por WhatsApp</li>
           </ul>
         </div>
 
         <aside class="hero-panel" aria-label="Filtros del catalogo">
-          <p class="card-label">Busqueda rapida</p>
-          <h2>Elige fechas y el tipo de vehiculo.</h2>
+          <p class="card-label">Busqueda mensual</p>
+          <h2>Elige inicio, duracion y tipo de vehiculo.</h2>
 
           <form class="search-panel" id="searchForm">
             <label>
-              <span>Desde</span>
+              <span>Inicio</span>
               <input id="filterStart" type="date">
             </label>
             <label>
-              <span>Hasta</span>
-              <input id="filterEnd" type="date">
+              <span>Duracion</span>
+              <select id="filterTerm">
+                <option value="1">1 mes</option>
+                <option value="3">3 meses</option>
+                <option value="12plus">12 meses o mas</option>
+              </select>
             </label>
             <label>
               <span>Tipo</span>
@@ -117,7 +121,7 @@
                 <option value="furgoneta">Furgonetas</option>
               </select>
             </label>
-            <button class="button button-primary" type="submit">Aplicar filtros</button>
+            <button class="button button-primary" type="submit">Ver opciones</button>
           </form>
         </aside>
       </section>
@@ -125,10 +129,10 @@
       <section class="catalog-section" id="catalogo">
         <div class="section-heading">
           <p class="eyebrow">Vehiculos</p>
-          <h2>Catalogo</h2>
+          <h2>Catalogo mensual</h2>
           <p>
-            Busca por modelo, ciudad o rasgo y entra en WhatsApp cuando
-            encuentres el vehiculo que necesitas.
+            Busca por modelo, ciudad o rasgo y consulta el vehiculo que mejor
+            encaje para un alquiler de 1, 3 o 12 meses o mas.
           </p>
         </div>
 
@@ -151,24 +155,24 @@
       <section class="process-section" id="proceso">
         <div class="section-heading">
           <p class="eyebrow">Como reservar</p>
-          <h2>Un proceso claro y directo.</h2>
+          <h2>Un proceso mensual claro y directo.</h2>
         </div>
 
         <div class="process-grid">
           <article class="process-card">
             <span class="process-number">01</span>
-            <h3>Elige fechas</h3>
-            <p>Filtra el catalogo por fechas y revisa el tipo de vehiculo que necesitas.</p>
+            <h3>Elige inicio y plazo</h3>
+            <p>Selecciona la fecha de inicio y el plazo mensual que necesitas.</p>
           </article>
           <article class="process-card">
             <span class="process-number">02</span>
             <h3>Revisa la ficha</h3>
-            <p>Mira la informacion de cada coche o furgoneta y su estado en la propia foto.</p>
+            <p>Mira el precio por mes y la informacion de cada coche o furgoneta.</p>
           </article>
           <article class="process-card">
             <span class="process-number">03</span>
             <h3>Habla por WhatsApp</h3>
-            <p>Abre el chat con un mensaje listo para consultar y cerrar la reserva.</p>
+            <p>Abre el chat con el plazo elegido listo para pedir presupuesto o reservar.</p>
           </article>
         </div>
       </section>
@@ -177,7 +181,7 @@
     <footer class="site-footer">
       <div>
         <p>Alquilo Aqui</p>
-        <small>Catalogo online con contacto directo por WhatsApp.</small>
+        <small>Catalogo online para alquiler mensual con contacto directo por WhatsApp.</small>
       </div>
       <div class="footer-actions">
         <a
@@ -208,8 +212,8 @@
       <p class="card-label">Acceso protegido</p>
       <h2>Gestion del catalogo</h2>
       <p>
-        Usa la clave de gestion para editar vehiculos, bloquear fechas y ajustar
-        el boton de WhatsApp.
+        Usa la clave de gestion para editar vehiculos, bloquear periodos y
+        ajustar el boton de WhatsApp.
       </p>
 
       <form class="stack-form" id="adminLoginForm">
@@ -232,7 +236,7 @@
       <header class="admin-header">
         <div>
           <p class="card-label">Panel de gestion</p>
-          <h2>Vehiculos, fechas y CTA</h2>
+          <h2>Vehiculos, periodos y CTA</h2>
         </div>
         <div class="admin-header-actions">
           <button class="button button-secondary small-button" id="adminLogoutBtn" type="button">
@@ -288,8 +292,8 @@
                 </select>
               </label>
               <label>
-                <span>Precio por dia</span>
-                <input id="vehiclePrice" type="number" min="1" step="1" required placeholder="54">
+                <span>Precio por mes</span>
+                <input id="vehiclePrice" type="number" min="1" step="1" required placeholder="1350">
               </label>
             </div>
             <div class="split-fields">

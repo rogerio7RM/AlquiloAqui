@@ -1,12 +1,13 @@
 # Alquilo Aqui
 
-Catalogo web estilo marketplace para `Alquilo Aqui`, inspirado en el flujo publico de Amovens pero simplificado para reservas cerradas por WhatsApp.
+Catalogo web estilo marketplace para `Alquilo Aqui`, inspirado en el flujo publico de Amovens pero simplificado para alquileres mensuales cerrados por WhatsApp.
 
 ## Incluye
 
 - Portada con CTA directo a WhatsApp.
-- Catalogo de coches y furgonetas con filtros por tipo, texto y disponibilidad.
-- Vehiculos visibles aunque esten no disponibles.
+- Catalogo de coches y furgonetas con filtros por tipo, texto, inicio y plazo.
+- Alquiler mensual con opciones de `1 mes`, `3 meses` y `12 meses o mas`.
+- Precio mensual visible en cada vehiculo.
 - Panel de gestion protegido por clave para crear, editar y eliminar vehiculos.
 - Calendario mensual con bloqueos de fechas por vehiculo.
 
@@ -26,6 +27,6 @@ La gestion se guarda en `localStorage` del navegador. Eso permite usarlo ya mism
 
 - `index.html`: estructura principal del sitio y modales de gestion.
 - `styles.css`: visual, layout responsive y calendario.
-- `app.js`: catalogo, filtros, CTA de WhatsApp, gestion de vehiculos y bloqueos.
+- `app.js`: catalogo mensual, filtros, CTA de WhatsApp, gestion de vehiculos y bloqueos.
 - `assets/logo-alquilo-aqui.png`: logo principal.
 - `CNAME`: dominio personalizado para GitHub Pages.

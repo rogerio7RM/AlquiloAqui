@@ -1,5 +1,10 @@
 const STORAGE_KEY = "alquilo-aqui-catalogo-v1";
 const DEFAULT_ADMIN_PASSWORD = "AlquiloAqui2026!";
+const MONTHLY_TERMS = {
+  "1": { label: "1 mes", months: 1 },
+  "3": { label: "3 meses", months: 3 },
+  "12plus": { label: "12 meses o mas", months: 12 }
+};
 
 const state = {
   data: null,
@@ -31,7 +36,7 @@ function cacheDom() {
   refs.siteMenu = document.getElementById("siteMenu");
   refs.searchForm = document.getElementById("searchForm");
   refs.filterStart = document.getElementById("filterStart");
-  refs.filterEnd = document.getElementById("filterEnd");
+  refs.filterTerm = document.getElementById("filterTerm");
   refs.filterType = document.getElementById("filterType");
   refs.searchInput = document.getElementById("searchInput");
   refs.resetFiltersBtn = document.getElementById("resetFiltersBtn");
@@ -114,14 +119,14 @@ function bindPublicEvents() {
 
   refs.searchForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    normalizeFilterRangeInputs();
+    normalizeRentalFilters();
     renderPublic();
     document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  [refs.filterStart, refs.filterEnd, refs.filterType].forEach((element) => {
+  [refs.filterStart, refs.filterTerm, refs.filterType].forEach((element) => {
     element.addEventListener("change", () => {
-      normalizeFilterRangeInputs();
+      normalizeRentalFilters();
       renderPublic();
     });
   });
@@ -130,7 +135,7 @@ function bindPublicEvents() {
 
   refs.resetFiltersBtn.addEventListener("click", () => {
     refs.filterStart.value = "";
-    refs.filterEnd.value = "";
+    refs.filterTerm.value = "1";
     refs.filterType.value = "all";
     refs.searchInput.value = "";
     renderPublic();
@@ -218,7 +223,7 @@ function bindAdminEvents() {
     if (existingVehicle) {
       existingVehicle.name = vehicle.name;
       existingVehicle.type = vehicle.type;
-      existingVehicle.pricePerDay = vehicle.pricePerDay;
+      existingVehicle.pricePerMonth = vehicle.pricePerMonth;
       existingVehicle.location = vehicle.location;
       existingVehicle.passengers = vehicle.passengers;
       existingVehicle.transmission = vehicle.transmission;
@@ -391,19 +396,19 @@ function renderPublic() {
     return matchesType && matchesSearch;
   });
 
-  refs.fleetGrid.innerHTML = visibleVehicles.map(({ vehicle, availability }) => renderVehicleCard(vehicle, availability, filters.range)).join("");
+  refs.fleetGrid.innerHTML = visibleVehicles.map(({ vehicle, availability }) => renderVehicleCard(vehicle, availability, filters)).join("");
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
 }
 
-function renderVehicleCard(vehicle, availability, range) {
+function renderVehicleCard(vehicle, availability, filters) {
   const typeText = getTypeLabel(vehicle.type);
   const statusClass = availability.isAvailable ? "is-available" : "is-unavailable";
   const statusText = availability.isAvailable ? "Disponible" : "No disponible";
-  const actionLabel = availability.isAvailable ? "Reservar por WhatsApp" : "Pedir alternativa";
-  const whatsappUrl = buildVehicleWhatsappUrl(vehicle, availability, range);
+  const actionLabel = availability.isAvailable ? "Consultar por WhatsApp" : "Pedir alternativa";
+  const whatsappUrl = buildVehicleWhatsappUrl(vehicle, availability, filters);
   const blockHint = availability.isAvailable
-    ? getAvailableHint(availability, range)
-    : getUnavailableHint(availability, range);
+    ? getAvailableHint(availability, filters)
+    : getUnavailableHint(availability, filters);
   const imageUrl = vehicle.image || createVehiclePlaceholder(vehicle);
 
   return `
@@ -422,7 +427,7 @@ function renderVehicleCard(vehicle, availability, range) {
             <h3>${escapeHtml(vehicle.name)}</h3>
             <p class="vehicle-hint">${escapeHtml(vehicle.location)}</p>
           </div>
-          <span class="vehicle-price">${escapeHtml(formatPrice(vehicle.pricePerDay))}</span>
+          <span class="vehicle-price">${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
         </div>
 
         <p class="vehicle-copy">${escapeHtml(vehicle.summary)}</p>
@@ -479,7 +484,7 @@ function renderAdmin() {
     refs.vehicleId.value = editingVehicle.id;
     refs.vehicleName.value = editingVehicle.name;
     refs.vehicleType.value = editingVehicle.type;
-    refs.vehiclePrice.value = String(editingVehicle.pricePerDay);
+    refs.vehiclePrice.value = String(editingVehicle.pricePerMonth);
     refs.vehicleLocation.value = editingVehicle.location;
     refs.vehiclePassengers.value = String(editingVehicle.passengers);
     refs.vehicleTransmission.value = editingVehicle.transmission;
@@ -500,7 +505,7 @@ function renderAdmin() {
 
 function renderAdminVehicleItem(vehicle) {
   const availability = getVehicleAvailability(vehicle, null);
-  const currentStatus = availability.isAvailable ? "Disponible hoy" : "No disponible hoy";
+  const currentStatus = availability.isAvailable ? "Libre hoy" : "Ocupado hoy";
 
   return `
     <article class="admin-vehicle-item">
@@ -509,7 +514,7 @@ function renderAdminVehicleItem(vehicle) {
           <h4>${escapeHtml(vehicle.name)}</h4>
           <div class="admin-vehicle-meta">
             <span>${escapeHtml(getTypeLabel(vehicle.type))}</span>
-            <span>${escapeHtml(formatPrice(vehicle.pricePerDay))}</span>
+            <span>${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
             <span>${escapeHtml(vehicle.location)}</span>
             <span>${escapeHtml(currentStatus)}</span>
           </div>
@@ -680,11 +685,18 @@ function normalizeVehicle(vehicle) {
     return null;
   }
 
+  const legacyDailyPrice = Number(vehicle.pricePerDay);
+  const normalizedMonthlyPrice = Number(vehicle.pricePerMonth) > 0
+    ? Number(vehicle.pricePerMonth)
+    : legacyDailyPrice > 0
+      ? legacyDailyPrice * 30
+      : 1350;
+
   return {
     id: String(vehicle.id || createId("veh")),
     name: String(vehicle.name || "Vehiculo sin nombre"),
     type: ["coche", "suv", "furgoneta"].includes(vehicle.type) ? vehicle.type : "coche",
-    pricePerDay: Number(vehicle.pricePerDay) > 0 ? Number(vehicle.pricePerDay) : 50,
+    pricePerMonth: normalizedMonthlyPrice,
     location: String(vehicle.location || "Sin ciudad"),
     passengers: Number(vehicle.passengers) > 0 ? Number(vehicle.passengers) : 5,
     transmission: String(vehicle.transmission || "Manual"),
@@ -727,13 +739,13 @@ function createDemoVehicles() {
       id: createId("veh"),
       name: "Seat Ibiza Urban",
       type: "coche",
-      pricePerDay: 46,
+      pricePerMonth: 1380,
       location: "Madrid centro",
       passengers: 5,
       transmission: "Manual",
       fuel: "Gasolina",
       image: "",
-      summary: "Compacto agil para ciudad, aeropuerto y escapadas de fin de semana.",
+      summary: "Compacto agil para ciudad y uso mensual con consumo contenido.",
       features: ["Bluetooth", "Aire", "Consumo bajo"],
       blocks: [
         createBlockFromOffset(today, 2, 5, "Reserva confirmada"),
@@ -744,13 +756,13 @@ function createDemoVehicles() {
       id: createId("veh"),
       name: "Peugeot 3008 Allure",
       type: "suv",
-      pricePerDay: 72,
+      pricePerMonth: 2160,
       location: "Getafe",
       passengers: 5,
       transmission: "Automatica",
       fuel: "Hibrido",
       image: "",
-      summary: "SUV comodo para trayectos largos, familia y carretera con buen maletero.",
+      summary: "SUV comodo para alquiler mensual, carretera y uso familiar con buen maletero.",
       features: ["Camara", "CarPlay", "Etiqueta ECO"],
       blocks: [
         createBlockFromOffset(today, 9, 12, "Salida larga")
@@ -760,13 +772,13 @@ function createDemoVehicles() {
       id: createId("veh"),
       name: "Citroen Berlingo Cargo",
       type: "furgoneta",
-      pricePerDay: 79,
+      pricePerMonth: 2370,
       location: "Alcorcon",
       passengers: 3,
       transmission: "Manual",
       fuel: "Diesel",
       image: "",
-      summary: "Ideal para reparto, herramientas y pequenas mudanzas con acceso comodo.",
+      summary: "Ideal para reparto y trabajo por meses con acceso comodo y carga amplia.",
       features: ["Carga amplia", "Puerta lateral", "Anclajes"],
       blocks: [
         createBlockFromOffset(today, -1, 1, "Uso interno"),
@@ -777,13 +789,13 @@ function createDemoVehicles() {
       id: createId("veh"),
       name: "Renault Trafic Passenger",
       type: "furgoneta",
-      pricePerDay: 95,
+      pricePerMonth: 2850,
       location: "Leganes",
       passengers: 9,
       transmission: "Manual",
       fuel: "Diesel",
       image: "",
-      summary: "Furgoneta de pasajeros para grupos, eventos y viajes con mucho espacio.",
+      summary: "Furgoneta de pasajeros para traslados y uso continuo con mucho espacio.",
       features: ["9 plazas", "Maletero", "USB"],
       blocks: []
     }
@@ -801,7 +813,8 @@ function createBlockFromOffset(baseDate, startOffset, endOffset, note) {
 
 function getPublicFilters() {
   return {
-    range: normalizeDateRange(refs.filterStart.value, refs.filterEnd.value),
+    range: buildRentalRange(refs.filterStart.value, refs.filterTerm.value),
+    term: refs.filterTerm.value,
     type: refs.filterType.value,
     search: refs.searchInput.value.trim().toLowerCase()
   };
@@ -824,39 +837,44 @@ function getVehicleAvailability(vehicle, range) {
   };
 }
 
-function getAvailableHint(availability, range) {
-  if (range) {
-    return `Fechas seleccionadas sin bloqueos: ${formatDateRange(range.start, range.end)}.`;
+function getAvailableHint(availability, filters) {
+  if (filters.range) {
+    return `Plazo solicitado libre: ${formatRentalSelection(filters.range, filters.term)}.`;
   }
 
   if (availability.nextBlock) {
     return `Proximo bloqueo ${formatDateRange(availability.nextBlock.start, availability.nextBlock.end)}.`;
   }
 
-  return "Sin bloqueos cargados.";
+  return "Selecciona inicio y plazo: 1 mes, 3 meses o 12 meses o mas.";
 }
 
-function getUnavailableHint(availability, range) {
+function getUnavailableHint(availability, filters) {
   const activeBlock = availability.conflicts[0];
 
   if (!activeBlock) {
-    return "Consulta las fechas en la ficha.";
+    return "Consulta el inicio y el plazo en la ficha.";
   }
 
-  if (range) {
-    return `Fechas seleccionadas ocupadas. Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
+  if (filters.range) {
+    return `Plazo solicitado ocupado. Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
   }
 
   return `Bloqueado ${formatDateRange(activeBlock.start, activeBlock.end)}.`;
 }
 
-function buildVehicleWhatsappUrl(vehicle, availability, range) {
+function buildVehicleWhatsappUrl(vehicle, availability, filters) {
   const phone = state.data.settings.whatsappNumber;
+  const termLabel = getMonthlyTermLabel(filters.term);
   const messageParts = [
     `Hola, quiero consultar el ${vehicle.name}.`,
-    range ? `Fechas: ${formatDateRange(range.start, range.end)}.` : "Quiero saber las fechas libres.",
-    availability.isAvailable ? "La ficha aparece libre en la web." : "La ficha aparece ocupada en la web y quiero una alternativa o una fecha libre.",
-    `Precio publicado: ${formatPrice(vehicle.pricePerDay)}.`
+    filters.range
+      ? `Plazo solicitado: ${formatRentalSelection(filters.range, filters.term)}.`
+      : `Plazo deseado: ${termLabel}. Inicio flexible.`,
+    availability.isAvailable
+      ? "La ficha aparece libre para ese plazo."
+      : "La ficha aparece ocupada para ese plazo y quiero una alternativa o una fecha libre.",
+    `Precio publicado: ${formatPrice(vehicle.pricePerMonth)}.`
   ];
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(messageParts.join(" "))}`;
@@ -864,7 +882,7 @@ function buildVehicleWhatsappUrl(vehicle, availability, range) {
 
 function syncGlobalWhatsappLinks() {
   const phone = state.data.settings.whatsappNumber;
-  const message = encodeURIComponent("Hola, quiero alquilar un vehiculo con Alquilo Aqui.");
+  const message = encodeURIComponent("Hola, quiero consultar un alquiler mensual con Alquilo Aqui.");
   const url = `https://wa.me/${phone}?text=${message}`;
 
   refs.heroWhatsappLink.href = url;
@@ -937,7 +955,7 @@ function readVehicleForm() {
     id: refs.vehicleId.value || "",
     name: refs.vehicleName.value.trim(),
     type: refs.vehicleType.value,
-    pricePerDay: Number(refs.vehiclePrice.value),
+    pricePerMonth: Number(refs.vehiclePrice.value),
     location: refs.vehicleLocation.value.trim(),
     passengers: Number(refs.vehiclePassengers.value),
     transmission: refs.vehicleTransmission.value.trim(),
@@ -958,15 +976,37 @@ function findVehicleById(vehicleId) {
   return state.data.vehicles.find((vehicle) => vehicle.id === vehicleId) || null;
 }
 
-function normalizeFilterRangeInputs() {
-  const normalizedRange = normalizeDateRange(refs.filterStart.value, refs.filterEnd.value);
+function normalizeRentalFilters() {
+  if (!MONTHLY_TERMS[refs.filterTerm.value]) {
+    refs.filterTerm.value = "1";
+  }
+}
 
-  if (!normalizedRange) {
-    return;
+function buildRentalRange(start, termValue) {
+  if (!start) {
+    return null;
   }
 
-  refs.filterStart.value = normalizedRange.start;
-  refs.filterEnd.value = normalizedRange.end;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = addMonthsKeepingDay(startDate, getMonthlyTermMonths(termValue));
+  endDate.setDate(endDate.getDate() - 1);
+
+  return {
+    start: toIsoDate(startDate),
+    end: toIsoDate(endDate)
+  };
+}
+
+function getMonthlyTermLabel(termValue) {
+  return MONTHLY_TERMS[termValue]?.label || MONTHLY_TERMS["1"].label;
+}
+
+function getMonthlyTermMonths(termValue) {
+  return MONTHLY_TERMS[termValue]?.months || MONTHLY_TERMS["1"].months;
+}
+
+function formatRentalSelection(range, termValue) {
+  return `${getMonthlyTermLabel(termValue)} desde ${formatDate(range.start)} hasta ${formatDate(range.end)}`;
 }
 
 function normalizeDateRange(start, end) {
@@ -993,7 +1033,7 @@ function sortBlocks(blocks) {
 }
 
 function formatPrice(value) {
-  return `${Number(value)} EUR/dia`;
+  return `${Number(value)} EUR/mes`;
 }
 
 function formatDateRange(start, end) {
@@ -1038,6 +1078,14 @@ function addMonths(date, amount) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
 
+function addMonthsKeepingDay(date, amount) {
+  const targetYear = date.getFullYear();
+  const targetMonth = date.getMonth() + amount;
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(date.getDate(), lastDayOfTargetMonth);
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
 function getDaysInMonth(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
@@ -1063,7 +1111,7 @@ function createId(prefix) {
 function createVehiclePlaceholder(vehicle) {
   const title = escapeSvg(vehicle.name);
   const type = escapeSvg(getTypeLabel(vehicle.type));
-  const price = escapeSvg(formatPrice(vehicle.pricePerDay));
+  const price = escapeSvg(formatPrice(vehicle.pricePerMonth));
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520">
       <defs>

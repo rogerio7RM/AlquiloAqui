@@ -68,7 +68,11 @@ function cacheDom() {
   refs.vehiclePassengers = document.getElementById("vehiclePassengers");
   refs.vehicleTransmission = document.getElementById("vehicleTransmission");
   refs.vehicleFuel = document.getElementById("vehicleFuel");
-  refs.vehicleImage = document.getElementById("vehicleImage");
+  refs.vehicleImageFile = document.getElementById("vehicleImageFile");
+  refs.vehicleImagePreview = document.getElementById("vehicleImagePreview");
+  refs.vehicleImagePreviewImg = document.getElementById("vehicleImagePreviewImg");
+  refs.vehicleImagePreviewEmpty = document.getElementById("vehicleImagePreviewEmpty");
+  refs.clearVehicleImageBtn = document.getElementById("clearVehicleImageBtn");
   refs.vehicleSummary = document.getElementById("vehicleSummary");
   refs.vehicleFeatures = document.getElementById("vehicleFeatures");
   refs.vehicleFormMessage = document.getElementById("vehicleFormMessage");
@@ -209,9 +213,30 @@ function bindAdminEvents() {
     setMessage(refs.settingsMessage, "Configuracion guardada.", "success");
   });
 
-  refs.vehicleForm.addEventListener("submit", (event) => {
+  refs.vehicleImageFile.addEventListener("change", async () => {
+    try {
+      await handleVehicleImageSelection();
+    } catch (error) {
+      setMessage(refs.vehicleFormMessage, error.message || "No se pudo cargar la imagen.", "error");
+    }
+  });
+
+  refs.clearVehicleImageBtn.addEventListener("click", () => {
+    clearVehicleImage();
+    setMessage(refs.vehicleFormMessage, "Imagen eliminada de la ficha.", "success");
+  });
+
+  refs.vehicleForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const vehicle = readVehicleForm();
+    let vehicle;
+    const previousState = JSON.stringify(state.data);
+
+    try {
+      vehicle = await readVehicleForm();
+    } catch (error) {
+      setMessage(refs.vehicleFormMessage, error.message || "No se pudo procesar la imagen.", "error");
+      return;
+    }
 
     if (!vehicle.name || !vehicle.location || !vehicle.transmission || !vehicle.fuel || !vehicle.summary) {
       setMessage(refs.vehicleFormMessage, "Completa los campos obligatorios del vehiculo.", "error");
@@ -241,7 +266,20 @@ function bindAdminEvents() {
       setMessage(refs.vehicleFormMessage, "Vehiculo creado.", "success");
     }
 
-    saveState();
+    try {
+      saveState();
+    } catch (error) {
+      state.data = normalizeState(JSON.parse(previousState));
+      renderPublic();
+      renderAdmin();
+      setMessage(
+        refs.vehicleFormMessage,
+        "No se pudo guardar la imagen. Prueba con un JPG/PNG mas ligero.",
+        "error"
+      );
+      return;
+    }
+
     state.ui.editingVehicleId = null;
     if (!state.ui.blockVehicleId) {
       state.ui.blockVehicleId = state.data.vehicles[0]?.id ?? null;
@@ -489,7 +527,8 @@ function renderAdmin() {
     refs.vehiclePassengers.value = String(editingVehicle.passengers);
     refs.vehicleTransmission.value = editingVehicle.transmission;
     refs.vehicleFuel.value = editingVehicle.fuel;
-    refs.vehicleImage.value = editingVehicle.image;
+    refs.vehicleImageFile.value = "";
+    setCurrentVehicleImage(editingVehicle.image);
     refs.vehicleSummary.value = editingVehicle.summary;
     refs.vehicleFeatures.value = editingVehicle.features.join(", ");
   } else {
@@ -950,7 +989,11 @@ function resolveSelectedBlockVehicleId() {
   return state.ui.blockVehicleId;
 }
 
-function readVehicleForm() {
+async function readVehicleForm() {
+  const uploadedImage = refs.vehicleImageFile.files?.[0]
+    ? await optimizeVehicleImageFile(refs.vehicleImageFile.files[0])
+    : null;
+
   return {
     id: refs.vehicleId.value || "",
     name: refs.vehicleName.value.trim(),
@@ -960,7 +1003,7 @@ function readVehicleForm() {
     passengers: Number(refs.vehiclePassengers.value),
     transmission: refs.vehicleTransmission.value.trim(),
     fuel: refs.vehicleFuel.value.trim(),
-    image: refs.vehicleImage.value.trim(),
+    image: uploadedImage ?? getCurrentVehicleImage(),
     summary: refs.vehicleSummary.value.trim(),
     features: refs.vehicleFeatures.value.split(",").map((item) => item.trim()).filter(Boolean)
   };
@@ -970,6 +1013,131 @@ function resetVehicleForm() {
   refs.vehicleForm.reset();
   refs.vehicleId.value = "";
   refs.vehicleType.value = "coche";
+  refs.vehicleImageFile.value = "";
+  setCurrentVehicleImage("");
+}
+
+async function handleVehicleImageSelection() {
+  const file = refs.vehicleImageFile.files?.[0];
+
+  if (!file) {
+    updateVehicleImagePreview(getCurrentVehicleImage());
+    return;
+  }
+
+  if (!isSupportedVehicleImage(file)) {
+    refs.vehicleImageFile.value = "";
+    throw new Error("Solo se permiten archivos JPG o PNG.");
+  }
+
+  try {
+    const previewImage = await readFileAsDataUrl(file);
+    updateVehicleImagePreview(previewImage);
+    setMessage(refs.vehicleFormMessage, "Imagen lista para guardar.", "success");
+  } catch (error) {
+    refs.vehicleImageFile.value = "";
+    updateVehicleImagePreview(getCurrentVehicleImage());
+    setMessage(refs.vehicleFormMessage, "No se pudo cargar la imagen seleccionada.", "error");
+  }
+}
+
+function clearVehicleImage() {
+  refs.vehicleImageFile.value = "";
+  setCurrentVehicleImage("");
+}
+
+function getCurrentVehicleImage() {
+  return refs.vehicleForm.dataset.currentImage || "";
+}
+
+function setCurrentVehicleImage(image) {
+  refs.vehicleForm.dataset.currentImage = image || "";
+  updateVehicleImagePreview(image || "");
+}
+
+function updateVehicleImagePreview(image) {
+  const hasImage = Boolean(image);
+  refs.vehicleImagePreviewImg.classList.toggle("hidden", !hasImage);
+  refs.vehicleImagePreviewEmpty.classList.toggle("hidden", hasImage);
+
+  if (hasImage) {
+    refs.vehicleImagePreviewImg.src = image;
+    return;
+  }
+
+  refs.vehicleImagePreviewImg.removeAttribute("src");
+}
+
+function isSupportedVehicleImage(file) {
+  return ["image/jpeg", "image/png"].includes(file.type);
+}
+
+async function optimizeVehicleImageFile(file) {
+  if (!isSupportedVehicleImage(file)) {
+    throw new Error("Solo se permiten archivos JPG o PNG.");
+  }
+
+  const imageDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(imageDataUrl);
+  const dimensions = getScaledDimensions(image.width, image.height, 1600);
+  const canvas = document.createElement("canvas");
+  canvas.width = dimensions.width;
+  canvas.height = dimensions.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Tu navegador no pudo preparar la imagen.");
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const keepPng = file.type === "image/png" && imageHasTransparency(context, canvas.width, canvas.height);
+  return keepPng ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.82);
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No se pudo abrir la imagen."));
+    image.src = source;
+  });
+}
+
+function getScaledDimensions(width, height, maxSide) {
+  const largestSide = Math.max(width, height);
+
+  if (largestSide <= maxSide) {
+    return { width, height };
+  }
+
+  const scale = maxSide / largestSide;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale))
+  };
+}
+
+function imageHasTransparency(context, width, height) {
+  const imageData = context.getImageData(0, 0, width, height).data;
+
+  for (let index = 3; index < imageData.length; index += 4) {
+    if (imageData[index] < 250) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function findVehicleById(vehicleId) {

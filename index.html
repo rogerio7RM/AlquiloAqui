@@ -317,9 +317,25 @@
               </label>
             </div>
             <label>
-              <span>Imagen URL</span>
-              <input id="vehicleImage" type="url" placeholder="https://...">
+              <span>Imagen del vehiculo</span>
+              <input id="vehicleImageFile" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
             </label>
+            <div class="image-upload-preview" id="vehicleImagePreview">
+              <img
+                id="vehicleImagePreviewImg"
+                class="hidden"
+                alt="Vista previa de la imagen del vehiculo"
+              >
+              <p id="vehicleImagePreviewEmpty">Sin imagen subida</p>
+            </div>
+            <div class="image-upload-tools">
+              <button class="button button-secondary small-button" id="clearVehicleImageBtn" type="button">
+                Quitar imagen
+              </button>
+            </div>
+            <p class="helper-text">
+              Sube un archivo JPG o PNG desde tu dispositivo. La imagen se optimiza automaticamente.
+            </p>
             <label>
               <span>Descripcion corta</span>
               <textarea id="vehicleSummary" rows="3" placeholder="Ideal para escapadas, ciudad o reparto ligero."></textarea>

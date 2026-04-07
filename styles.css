@@ -444,6 +444,11 @@ textarea {
   color: var(--text);
 }
 
+input[type="file"] {
+  min-height: auto;
+  padding: 14px 16px;
+}
+
 textarea {
   min-height: 110px;
   padding: 14px 16px;
@@ -918,6 +923,36 @@ textarea:focus-visible {
 }
 
 .inline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.image-upload-preview {
+  display: grid;
+  place-items: center;
+  min-height: 190px;
+  padding: 12px;
+  border: 1px dashed rgba(0, 64, 128, 0.22);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.68);
+  overflow: hidden;
+}
+
+.image-upload-preview img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.image-upload-preview p {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.image-upload-tools {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;

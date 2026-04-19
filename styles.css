@@ -876,6 +876,11 @@ textarea:focus-visible {
   color: var(--highlight);
 }
 
+.sync-status {
+  max-width: 58ch;
+  margin-top: 8px;
+}
+
 .admin-panel {
   width: min(100%, 1320px);
   max-height: min(92vh, 1080px);

@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "alquilo-aqui": {
+      "catalogo": {
+        ".read": true,
+        ".write": "auth != null && auth.token.email == 'admin@tudominio.com'"
+      }
+    }
+  }
+}

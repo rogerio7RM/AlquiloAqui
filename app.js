@@ -1,4 +1,15 @@
 const STORAGE_KEY = "alquilo-aqui-catalogo-v1";
+const FIREBASE_SDK_VERSION = "12.12.0";
+const FIREBASE_DATABASE_PATH = "alquilo-aqui/catalogo";
+const FIREBASE_CONFIG_KEYS = [
+  "apiKey",
+  "authDomain",
+  "databaseURL",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId"
+];
 const DEFAULT_ADMIN_PASSWORD = "AlquiloAqui2026!";
 const MONTHLY_TERMS = {
   "1": { label: "1 mes", months: 1 },
@@ -13,6 +24,20 @@ const state = {
     editingVehicleId: null,
     blockVehicleId: null,
     calendarMonth: startOfMonth(new Date())
+  },
+  sync: {
+    auth: null,
+    databaseRef: null,
+    initPromise: null,
+    isConfigured: false,
+    isReady: false,
+    isSaving: false,
+    isRemoteEmpty: false,
+    hasPendingLocalSave: false,
+    lastRemoteJson: "",
+    pendingSave: Promise.resolve(),
+    status: "local",
+    errorMessage: ""
   }
 };
 
@@ -29,6 +54,8 @@ function init() {
   bindAdminEvents();
   syncGlobalWhatsappLinks();
   renderPublic();
+  renderSyncStatus();
+  state.sync.initPromise = initRemoteSync();
 }
 
 function cacheDom() {
@@ -53,6 +80,8 @@ function cacheDom() {
   refs.adminPasswordInput = document.getElementById("adminPasswordInput");
   refs.adminLoginMessage = document.getElementById("adminLoginMessage");
   refs.adminLogoutBtn = document.getElementById("adminLogoutBtn");
+  refs.loginSyncStatus = document.getElementById("loginSyncStatus");
+  refs.syncStatus = document.getElementById("syncStatus");
 
   refs.settingsForm = document.getElementById("settingsForm");
   refs.settingsWhatsapp = document.getElementById("settingsWhatsapp");
@@ -168,12 +197,14 @@ function bindPublicEvents() {
 }
 
 function bindAdminEvents() {
-  refs.adminLoginForm.addEventListener("submit", (event) => {
+  refs.adminLoginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const password = refs.adminPasswordInput.value;
 
-    if (password !== state.data.settings.adminPassword) {
-      setMessage(refs.adminLoginMessage, "Clave incorrecta.", "error");
+    try {
+      await authenticateAdmin(password);
+    } catch (error) {
+      setMessage(refs.adminLoginMessage, getAdminAuthErrorMessage(error), "error");
       return;
     }
 
@@ -186,10 +217,11 @@ function bindAdminEvents() {
 
   refs.adminLogoutBtn.addEventListener("click", () => {
     state.ui.isAdminAuthenticated = false;
+    signOutRemoteAdmin();
     closeAdminPanel();
   });
 
-  refs.settingsForm.addEventListener("submit", (event) => {
+  refs.settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const whatsappNumber = normalizeWhatsappNumber(refs.settingsWhatsapp.value);
     const newPassword = refs.settingsPassword.value.trim();
@@ -199,12 +231,14 @@ function bindAdminEvents() {
       return;
     }
 
-    state.data.settings.whatsappNumber = whatsappNumber;
-
-    if (newPassword) {
-      state.data.settings.adminPassword = newPassword;
+    try {
+      await updateAdminPassword(newPassword);
+    } catch (error) {
+      setMessage(refs.settingsMessage, getAdminAuthErrorMessage(error), "error");
+      return;
     }
 
+    state.data.settings.whatsappNumber = whatsappNumber;
     saveState();
     refs.settingsPassword.value = "";
     syncGlobalWhatsappLinks();
@@ -513,6 +547,7 @@ function renderAdmin() {
     return;
   }
 
+  renderSyncStatus();
   refs.settingsWhatsapp.value = state.data.settings.whatsappNumber;
   refs.settingsPassword.value = "";
 
@@ -540,6 +575,64 @@ function renderAdmin() {
     : `<p class="helper-text">No hay vehiculos en el catalogo.</p>`;
 
   renderBlocksSection();
+}
+
+function renderSyncStatus() {
+  const statusElements = [refs.loginSyncStatus, refs.syncStatus].filter(Boolean);
+
+  if (!statusElements.length) {
+    return;
+  }
+
+  if (state.sync.status === "local") {
+    setSyncStatusMessage(
+      statusElements,
+      "Modo local: los cambios solo quedan en este dispositivo. Configura Firebase para sincronizar todos.",
+      ""
+    );
+    return;
+  }
+
+  if (state.sync.status === "connecting") {
+    setSyncStatusMessage(statusElements, "Conectando sincronizacion remota...", "");
+    return;
+  }
+
+  if (state.sync.status === "pending") {
+    setSyncStatusMessage(statusElements, "Cambio guardado localmente. Se enviara cuando la base remota este lista.", "");
+    return;
+  }
+
+  if (state.sync.status === "empty") {
+    setSyncStatusMessage(
+      statusElements,
+      "Base remota conectada, pero vacia. Entra como administrador y guarda un cambio para publicarla.",
+      ""
+    );
+    return;
+  }
+
+  if (state.sync.status === "saving" || state.sync.isSaving) {
+    setSyncStatusMessage(statusElements, "Guardando cambios compartidos...", "");
+    return;
+  }
+
+  if (state.sync.status === "error") {
+    setSyncStatusMessage(statusElements, `Sincronizacion remota con error: ${state.sync.errorMessage}`, "error");
+    return;
+  }
+
+  setSyncStatusMessage(
+    statusElements,
+    "Sincronizacion remota activa. Los cambios se actualizan en todos los dispositivos.",
+    "success"
+  );
+}
+
+function setSyncStatusMessage(elements, message, type) {
+  elements.forEach((element) => {
+    setMessage(element, message, type);
+  });
 }
 
 function renderAdminVehicleItem(vehicle) {
@@ -675,7 +768,7 @@ function loadState() {
 
   if (!savedValue) {
     const freshState = createInitialState();
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(freshState));
+    persistLocalState(freshState);
     return freshState;
   }
 
@@ -684,13 +777,311 @@ function loadState() {
     return normalizeState(parsedValue);
   } catch (error) {
     const freshState = createInitialState();
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(freshState));
+    persistLocalState(freshState);
     return freshState;
   }
 }
 
 function saveState() {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+  persistLocalState(state.data);
+  void saveRemoteState().catch(() => {});
+}
+
+function persistLocalState(data) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeState(data)));
+}
+
+async function initRemoteSync() {
+  const firebaseConfig = getFirebaseConfig();
+
+  if (!firebaseConfig) {
+    state.sync.status = "local";
+    renderSyncStatus();
+    return;
+  }
+
+  state.sync.isConfigured = true;
+  state.sync.status = "connecting";
+  renderSyncStatus();
+
+  try {
+    await loadFirebaseSdk();
+
+    if (!window.firebase) {
+      throw new Error("Firebase no esta disponible.");
+    }
+
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(firebaseConfig);
+    }
+
+    state.sync.auth = window.firebase.auth();
+    state.sync.databaseRef = window.firebase.database().ref(FIREBASE_DATABASE_PATH);
+    state.sync.databaseRef.on("value", handleRemoteSnapshot, handleRemoteError);
+  } catch (error) {
+    state.sync.status = "error";
+    state.sync.errorMessage = getErrorMessage(error);
+    renderSyncStatus();
+  }
+}
+
+function handleRemoteSnapshot(snapshot) {
+  state.sync.isReady = true;
+  state.sync.isRemoteEmpty = !snapshot.exists();
+
+  if (state.sync.hasPendingLocalSave && state.sync.auth?.currentUser) {
+    state.sync.lastRemoteJson = snapshot.exists()
+      ? JSON.stringify(createRemoteState(normalizeState(snapshot.val())))
+      : "";
+    void saveRemoteState({ force: true }).catch(() => {});
+    return;
+  }
+
+  if (!snapshot.exists()) {
+    state.sync.status = "empty";
+    renderSyncStatus();
+    return;
+  }
+
+  const remoteState = normalizeState(snapshot.val());
+  state.sync.lastRemoteJson = JSON.stringify(createRemoteState(remoteState));
+  state.sync.status = "ready";
+  state.sync.errorMessage = "";
+  applySharedState(remoteState);
+}
+
+function handleRemoteError(error) {
+  state.sync.status = "error";
+  state.sync.errorMessage = getErrorMessage(error);
+  renderSyncStatus();
+}
+
+async function saveRemoteState(options = {}) {
+  if (!state.sync.isConfigured) {
+    return;
+  }
+
+  if (!state.sync.databaseRef || !state.sync.isReady) {
+    state.sync.hasPendingLocalSave = true;
+    state.sync.status = "pending";
+    renderSyncStatus();
+    return;
+  }
+
+  const remoteState = createRemoteState(state.data);
+  const remoteJson = JSON.stringify(remoteState);
+
+  if (!options.force && remoteJson === state.sync.lastRemoteJson) {
+    renderSyncStatus();
+    return;
+  }
+
+  state.sync.isSaving = true;
+  state.sync.status = "saving";
+  state.sync.errorMessage = "";
+  state.sync.hasPendingLocalSave = false;
+  renderSyncStatus();
+
+  const currentSave = state.sync.pendingSave
+    .catch(() => {})
+    .then(async () => {
+      await state.sync.databaseRef.set(remoteState);
+      state.sync.lastRemoteJson = remoteJson;
+      state.sync.isRemoteEmpty = false;
+      state.sync.hasPendingLocalSave = false;
+      state.sync.status = "ready";
+      state.sync.errorMessage = "";
+    });
+
+  state.sync.pendingSave = currentSave;
+
+  try {
+    await currentSave;
+  } catch (error) {
+    state.sync.status = "error";
+    state.sync.errorMessage = getErrorMessage(error);
+    state.sync.hasPendingLocalSave = true;
+    throw error;
+  } finally {
+    state.sync.isSaving = false;
+    renderSyncStatus();
+  }
+}
+
+function applySharedState(nextState) {
+  state.data = normalizeState(nextState);
+  persistLocalState(state.data);
+  reconcileUiWithData();
+  syncGlobalWhatsappLinks();
+  renderPublic();
+  renderAdmin();
+}
+
+function reconcileUiWithData() {
+  if (state.ui.editingVehicleId && !state.data.vehicles.some((vehicle) => vehicle.id === state.ui.editingVehicleId)) {
+    state.ui.editingVehicleId = null;
+  }
+
+  if (!state.data.vehicles.some((vehicle) => vehicle.id === state.ui.blockVehicleId)) {
+    state.ui.blockVehicleId = state.data.vehicles[0]?.id ?? null;
+  }
+}
+
+function createRemoteState(data) {
+  const normalizedState = normalizeState(data);
+
+  return {
+    settings: {
+      whatsappNumber: normalizedState.settings.whatsappNumber
+    },
+    vehicles: normalizedState.vehicles
+  };
+}
+
+function getFirebaseConfig() {
+  const rawConfig = window.ALQUILO_AQUI_FIREBASE_CONFIG;
+
+  if (!rawConfig || typeof rawConfig !== "object") {
+    return null;
+  }
+
+  const config = FIREBASE_CONFIG_KEYS.reduce((accumulator, key) => {
+    const value = rawConfig[key];
+
+    if (typeof value === "string" && value.trim()) {
+      accumulator[key] = value.trim();
+    }
+
+    return accumulator;
+  }, {});
+
+  const requiredKeys = ["apiKey", "authDomain", "databaseURL", "projectId", "appId"];
+  return requiredKeys.every((key) => config[key]) ? config : null;
+}
+
+function getRemoteAdminEmail() {
+  return String(
+    window.ALQUILO_AQUI_ADMIN_EMAIL ||
+    window.ALQUILO_AQUI_FIREBASE_CONFIG?.adminEmail ||
+    ""
+  ).trim();
+}
+
+async function loadFirebaseSdk() {
+  if (window.firebase?.database && window.firebase?.auth) {
+    return;
+  }
+
+  const baseUrl = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
+  await loadScriptOnce(`${baseUrl}/firebase-app-compat.js`);
+  await loadScriptOnce(`${baseUrl}/firebase-auth-compat.js`);
+  await loadScriptOnce(`${baseUrl}/firebase-database-compat.js`);
+}
+
+function loadScriptOnce(src) {
+  window.__alquiloAquiScriptPromises = window.__alquiloAquiScriptPromises || {};
+
+  if (window.__alquiloAquiScriptPromises[src]) {
+    return window.__alquiloAquiScriptPromises[src];
+  }
+
+  window.__alquiloAquiScriptPromises[src] = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`No se pudo cargar ${src}.`));
+    document.head.appendChild(script);
+  });
+
+  return window.__alquiloAquiScriptPromises[src];
+}
+
+async function authenticateAdmin(password) {
+  if (!state.sync.isConfigured) {
+    if (password !== state.data.settings.adminPassword) {
+      const error = new Error("Clave incorrecta.");
+      error.code = "local/wrong-password";
+      throw error;
+    }
+
+    return;
+  }
+
+  await state.sync.initPromise;
+
+  const adminEmail = getRemoteAdminEmail();
+
+  if (!adminEmail) {
+    throw new Error("Falta ALQUILO_AQUI_ADMIN_EMAIL en config.js.");
+  }
+
+  if (!state.sync.auth) {
+    throw new Error("No se pudo conectar con Firebase Auth.");
+  }
+
+  await state.sync.auth.signInWithEmailAndPassword(adminEmail, password);
+
+  if (state.sync.isRemoteEmpty || state.sync.hasPendingLocalSave) {
+    await saveRemoteState({ force: true });
+  }
+}
+
+function signOutRemoteAdmin() {
+  if (!state.sync.auth?.currentUser) {
+    return;
+  }
+
+  void state.sync.auth.signOut().catch(() => {});
+}
+
+async function updateAdminPassword(newPassword) {
+  if (!newPassword) {
+    return;
+  }
+
+  if (!state.sync.isConfigured) {
+    state.data.settings.adminPassword = newPassword;
+    return;
+  }
+
+  await state.sync.initPromise;
+
+  if (!state.sync.auth?.currentUser) {
+    throw new Error("Vuelve a entrar al panel para cambiar la clave.");
+  }
+
+  await state.sync.auth.currentUser.updatePassword(newPassword);
+}
+
+function getAdminAuthErrorMessage(error) {
+  const code = error?.code || "";
+
+  if (code === "local/wrong-password" || code === "auth/invalid-credential" || code === "auth/wrong-password") {
+    return "Clave incorrecta.";
+  }
+
+  if (code === "auth/user-not-found") {
+    return "El usuario administrador de Firebase no existe.";
+  }
+
+  if (code === "auth/network-request-failed") {
+    return "No se pudo conectar. Revisa la conexion e intentalo otra vez.";
+  }
+
+  if (code === "auth/requires-recent-login") {
+    return "Vuelve a entrar al panel y cambia la clave de nuevo.";
+  }
+
+  if (code === "auth/weak-password") {
+    return "La nueva clave debe tener al menos 6 caracteres.";
+  }
+
+  return getErrorMessage(error) || "No se pudo validar la clave.";
+}
+
+function getErrorMessage(error) {
+  return String(error?.message || error || "Error desconocido.");
 }
 
 function createInitialState() {
@@ -706,17 +1097,37 @@ function createInitialState() {
 function normalizeState(rawState) {
   const fallbackState = createInitialState();
   const settings = rawState?.settings || {};
-  const vehicles = Array.isArray(rawState?.vehicles) ? rawState.vehicles : [];
+  const vehicles = Array.isArray(rawState?.vehicles)
+    ? rawState.vehicles
+    : rawState?.vehicles && typeof rawState.vehicles === "object"
+      ? Object.values(rawState.vehicles)
+      : [];
+  const fallbackAdminPassword =
+    state.data?.settings?.adminPassword ||
+    getSavedAdminPassword() ||
+    fallbackState.settings.adminPassword;
 
   return {
     settings: {
       whatsappNumber: normalizeWhatsappNumber(settings.whatsappNumber) || fallbackState.settings.whatsappNumber,
       adminPassword: typeof settings.adminPassword === "string" && settings.adminPassword.trim()
         ? settings.adminPassword
-        : fallbackState.settings.adminPassword
+        : fallbackAdminPassword
     },
     vehicles: vehicles.length ? vehicles.map(normalizeVehicle).filter(Boolean) : fallbackState.vehicles
   };
+}
+
+function getSavedAdminPassword() {
+  try {
+    const savedValue = window.localStorage.getItem(STORAGE_KEY);
+    const parsedValue = savedValue ? JSON.parse(savedValue) : null;
+    return typeof parsedValue?.settings?.adminPassword === "string" && parsedValue.settings.adminPassword.trim()
+      ? parsedValue.settings.adminPassword
+      : "";
+  } catch (error) {
+    return "";
+  }
 }
 
 function normalizeVehicle(vehicle) {

@@ -9,4 +9,4 @@ window.ALQUILO_AQUI_FIREBASE_CONFIG = {
   measurementId: "G-96TM62XDB2"
 };
 
-window.ALQUILO_AQUI_ADMIN_EMAIL = "contacto@alquiloaqui.com";
+window.ALQUILO_AQUI_ADMIN_EMAIL = "contacto@alquiloaqui.es";

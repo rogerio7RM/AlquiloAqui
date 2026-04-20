@@ -1,6 +1,11 @@
 const STORAGE_KEY = "alquilo-aqui-catalogo-v1";
 const FIREBASE_SDK_VERSION = "12.12.0";
 const FIREBASE_DATABASE_PATH = "alquilo-aqui/catalogo";
+const VEHICLE_IMAGE_MAX_SIDE = 1200;
+const VEHICLE_IMAGE_JPEG_QUALITY = 0.72;
+const VEHICLE_CROP_OUTPUT_WIDTH = 1200;
+const VEHICLE_CROP_OUTPUT_HEIGHT = 750;
+const VEHICLE_IMAGE_INLINE_REOPTIMIZE_LENGTH = 450000;
 const FIREBASE_CONFIG_KEYS = [
   "apiKey",
   "authDomain",
@@ -850,7 +855,40 @@ function saveState() {
 }
 
 function persistLocalState(data) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeState(data)));
+  const normalizedState = normalizeState(data);
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedState));
+    return;
+  } catch (error) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(createLocalCacheState(normalizedState)));
+      return;
+    } catch (cacheError) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (removeError) {
+        // Ignore storage errors so Firebase sync can still continue.
+      }
+    }
+  }
+}
+
+function createLocalCacheState(data) {
+  const normalizedState = normalizeState(data);
+
+  return {
+    ...normalizedState,
+    vehicles: normalizedState.vehicles.map((vehicle) => {
+      const lightweightImages = getVehicleImages(vehicle).filter((image) => !isInlineImageData(image));
+
+      return {
+        ...vehicle,
+        image: lightweightImages[0] || "",
+        images: lightweightImages
+      };
+    })
+  };
 }
 
 async function initRemoteSync() {
@@ -1491,7 +1529,7 @@ async function readVehicleForm() {
     await queueVehicleImageSelection();
   }
 
-  const images = getCurrentVehicleImages();
+  const images = await optimizeVehicleImagesForStorage(getCurrentVehicleImages());
 
   return {
     id: refs.vehicleId.value || "",
@@ -1749,7 +1787,7 @@ function applyVehicleImageCrop() {
     cropMetrics.drawHeight * scaleY
   );
 
-  images[index] = canvas.toDataURL("image/jpeg", 0.84);
+  images[index] = canvas.toDataURL("image/jpeg", VEHICLE_IMAGE_JPEG_QUALITY);
   setCurrentVehicleImages(images);
   closeVehicleImageCropper();
   setMessage(refs.vehicleFormMessage, "Recorte aplicado. Guarda el vehiculo para publicarlo.", "success");
@@ -1796,8 +1834,8 @@ function getVehicleCropMetrics() {
     drawHeight,
     drawX: (stageWidth - drawWidth) / 2 + offsetX,
     drawY: (stageHeight - drawHeight) / 2 + offsetY,
-    outputWidth: 1400,
-    outputHeight: 875
+    outputWidth: VEHICLE_CROP_OUTPUT_WIDTH,
+    outputHeight: VEHICLE_CROP_OUTPUT_HEIGHT
   };
 }
 
@@ -1811,8 +1849,27 @@ async function optimizeVehicleImageFile(file) {
   }
 
   const imageDataUrl = await readFileAsDataUrl(file);
-  const image = await loadImage(imageDataUrl);
-  const dimensions = getScaledDimensions(image.width, image.height, 1600);
+  return optimizeVehicleImageSource(imageDataUrl);
+}
+
+async function optimizeVehicleImagesForStorage(images) {
+  const optimizedImages = [];
+
+  for (const image of normalizeVehicleImages(images)) {
+    if (!isInlineImageData(image) || image.length <= VEHICLE_IMAGE_INLINE_REOPTIMIZE_LENGTH) {
+      optimizedImages.push(image);
+      continue;
+    }
+
+    optimizedImages.push(await optimizeVehicleImageSource(image));
+  }
+
+  return optimizedImages;
+}
+
+async function optimizeVehicleImageSource(source) {
+  const image = await loadImage(source);
+  const dimensions = getScaledDimensions(image.width, image.height, VEHICLE_IMAGE_MAX_SIDE);
   const canvas = document.createElement("canvas");
   canvas.width = dimensions.width;
   canvas.height = dimensions.height;
@@ -1822,11 +1879,15 @@ async function optimizeVehicleImageFile(file) {
     throw new Error("Tu navegador no pudo preparar la imagen.");
   }
 
-  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  const keepPng = file.type === "image/png" && imageHasTransparency(context, canvas.width, canvas.height);
-  return keepPng ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.82);
+  return canvas.toDataURL("image/jpeg", VEHICLE_IMAGE_JPEG_QUALITY);
+}
+
+function isInlineImageData(image) {
+  return String(image || "").startsWith("data:image/");
 }
 
 function readFileAsDataUrl(file) {
@@ -1859,18 +1920,6 @@ function getScaledDimensions(width, height, maxSide) {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale))
   };
-}
-
-function imageHasTransparency(context, width, height) {
-  const imageData = context.getImageData(0, 0, width, height).data;
-
-  for (let index = 3; index < imageData.length; index += 4) {
-    if (imageData[index] < 250) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function findVehicleById(vehicleId) {

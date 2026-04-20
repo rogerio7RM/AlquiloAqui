@@ -850,7 +850,12 @@ function loadState() {
 }
 
 function saveState() {
-  persistLocalState(state.data);
+  try {
+    persistLocalState(state.data);
+  } catch (error) {
+    // Local cache must never block Firebase persistence or the admin workflow.
+  }
+
   void saveRemoteState().catch(() => {});
 }
 

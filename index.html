@@ -318,24 +318,46 @@
               </label>
             </div>
             <label>
-              <span>Imagen del vehiculo</span>
-              <input id="vehicleImageFile" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+              <span>Fotos del vehiculo</span>
+              <input id="vehicleImageFile" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
             </label>
-            <div class="image-upload-preview" id="vehicleImagePreview">
-              <img
-                id="vehicleImagePreviewImg"
-                class="hidden"
-                alt="Vista previa de la imagen del vehiculo"
-              >
-              <p id="vehicleImagePreviewEmpty">Sin imagen subida</p>
-            </div>
+            <div class="image-upload-list" id="vehicleImagesList"></div>
             <div class="image-upload-tools">
               <button class="button button-secondary small-button" id="clearVehicleImageBtn" type="button">
-                Quitar imagen
+                Quitar fotos
+              </button>
+            </div>
+            <div class="image-cropper hidden" id="vehicleImageCropper" aria-hidden="true">
+              <div class="image-cropper-head">
+                <div>
+                  <strong>Ajustar recorte</strong>
+                  <p>Encuadra la foto como se vera en el catalogo.</p>
+                </div>
+                <button class="mini-button" id="cancelImageCropBtn" type="button">Cerrar</button>
+              </div>
+              <div class="image-crop-stage" id="vehicleImageCropStage">
+                <img id="vehicleImageCropImg" alt="Foto para recortar">
+              </div>
+              <div class="crop-controls">
+                <label>
+                  <span>Zoom</span>
+                  <input id="vehicleImageCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+                </label>
+                <label>
+                  <span>Horizontal</span>
+                  <input id="vehicleImageCropX" type="range" min="-100" max="100" step="1" value="0">
+                </label>
+                <label>
+                  <span>Vertical</span>
+                  <input id="vehicleImageCropY" type="range" min="-100" max="100" step="1" value="0">
+                </label>
+              </div>
+              <button class="button button-primary small-button" id="applyImageCropBtn" type="button">
+                Aplicar recorte
               </button>
             </div>
             <p class="helper-text">
-              Sube un archivo JPG o PNG desde tu dispositivo. La imagen se optimiza automaticamente.
+              Sube uno o varios archivos JPG o PNG. La primera foto sera la principal y puedes ajustar el recorte antes de guardar.
             </p>
             <label>
               <span>Descripcion corta</span>

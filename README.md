@@ -8,7 +8,7 @@ Catalogo web estilo marketplace para `Alquilo Aqui`, inspirado en el flujo publi
 - Catalogo de coches y furgonetas con filtros por tipo, texto, inicio y plazo.
 - Alquiler mensual con opciones de `1 mes`, `3 meses` y `12 meses o mas`.
 - Precio mensual visible en cada vehiculo.
-- Subida directa de imagenes `JPG/PNG` para cada vehiculo desde el panel de gestion.
+- Subida multiple de imagenes `JPG/PNG` por vehiculo, con recorte desde el panel de gestion.
 - Panel de gestion protegido por clave para crear, editar y eliminar vehiculos.
 - Calendario mensual con bloqueos de fechas por vehiculo.
 

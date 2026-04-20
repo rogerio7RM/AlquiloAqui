@@ -23,7 +23,10 @@ const state = {
     isAdminAuthenticated: false,
     editingVehicleId: null,
     blockVehicleId: null,
-    calendarMonth: startOfMonth(new Date())
+    calendarMonth: startOfMonth(new Date()),
+    currentVehicleImages: [],
+    croppingImageIndex: null,
+    vehicleImageSelectionPromise: null
   },
   sync: {
     auth: null,
@@ -98,10 +101,16 @@ function cacheDom() {
   refs.vehicleTransmission = document.getElementById("vehicleTransmission");
   refs.vehicleFuel = document.getElementById("vehicleFuel");
   refs.vehicleImageFile = document.getElementById("vehicleImageFile");
-  refs.vehicleImagePreview = document.getElementById("vehicleImagePreview");
-  refs.vehicleImagePreviewImg = document.getElementById("vehicleImagePreviewImg");
-  refs.vehicleImagePreviewEmpty = document.getElementById("vehicleImagePreviewEmpty");
+  refs.vehicleImagesList = document.getElementById("vehicleImagesList");
   refs.clearVehicleImageBtn = document.getElementById("clearVehicleImageBtn");
+  refs.vehicleImageCropper = document.getElementById("vehicleImageCropper");
+  refs.vehicleImageCropStage = document.getElementById("vehicleImageCropStage");
+  refs.vehicleImageCropImg = document.getElementById("vehicleImageCropImg");
+  refs.vehicleImageCropZoom = document.getElementById("vehicleImageCropZoom");
+  refs.vehicleImageCropX = document.getElementById("vehicleImageCropX");
+  refs.vehicleImageCropY = document.getElementById("vehicleImageCropY");
+  refs.applyImageCropBtn = document.getElementById("applyImageCropBtn");
+  refs.cancelImageCropBtn = document.getElementById("cancelImageCropBtn");
   refs.vehicleSummary = document.getElementById("vehicleSummary");
   refs.vehicleFeatures = document.getElementById("vehicleFeatures");
   refs.vehicleFormMessage = document.getElementById("vehicleFormMessage");
@@ -165,6 +174,8 @@ function bindPublicEvents() {
   });
 
   refs.searchInput.addEventListener("input", renderPublic);
+
+  refs.fleetGrid.addEventListener("click", handleVehicleGalleryControlClick);
 
   refs.resetFiltersBtn.addEventListener("click", () => {
     refs.filterStart.value = "";
@@ -249,16 +260,25 @@ function bindAdminEvents() {
 
   refs.vehicleImageFile.addEventListener("change", async () => {
     try {
-      await handleVehicleImageSelection();
+      await queueVehicleImageSelection();
     } catch (error) {
-      setMessage(refs.vehicleFormMessage, error.message || "No se pudo cargar la imagen.", "error");
+      setMessage(refs.vehicleFormMessage, error.message || "No se pudieron cargar las fotos.", "error");
     }
   });
 
   refs.clearVehicleImageBtn.addEventListener("click", () => {
     clearVehicleImage();
-    setMessage(refs.vehicleFormMessage, "Imagen eliminada de la ficha.", "success");
+    setMessage(refs.vehicleFormMessage, "Fotos eliminadas de la ficha.", "success");
   });
+
+  refs.vehicleImagesList.addEventListener("click", handleVehicleImagesListClick);
+
+  [refs.vehicleImageCropZoom, refs.vehicleImageCropX, refs.vehicleImageCropY].forEach((control) => {
+    control.addEventListener("input", updateVehicleImageCropPreview);
+  });
+
+  refs.applyImageCropBtn.addEventListener("click", applyVehicleImageCrop);
+  refs.cancelImageCropBtn.addEventListener("click", closeVehicleImageCropper);
 
   refs.vehicleForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -268,7 +288,7 @@ function bindAdminEvents() {
     try {
       vehicle = await readVehicleForm();
     } catch (error) {
-      setMessage(refs.vehicleFormMessage, error.message || "No se pudo procesar la imagen.", "error");
+      setMessage(refs.vehicleFormMessage, error.message || "No se pudo procesar la ficha.", "error");
       return;
     }
 
@@ -288,6 +308,7 @@ function bindAdminEvents() {
       existingVehicle.transmission = vehicle.transmission;
       existingVehicle.fuel = vehicle.fuel;
       existingVehicle.image = vehicle.image;
+      existingVehicle.images = vehicle.images;
       existingVehicle.summary = vehicle.summary;
       existingVehicle.features = vehicle.features;
       setMessage(refs.vehicleFormMessage, "Vehiculo actualizado.", "success");
@@ -308,7 +329,7 @@ function bindAdminEvents() {
       renderAdmin();
       setMessage(
         refs.vehicleFormMessage,
-        "No se pudo guardar la imagen. Prueba con un JPG/PNG mas ligero.",
+        "No se pudieron guardar las fotos. Prueba con JPG/PNG mas ligeros o menos fotos.",
         "error"
       );
       return;
@@ -472,6 +493,26 @@ function renderPublic() {
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
 }
 
+function handleVehicleGalleryControlClick(event) {
+  const button = event.target.closest("[data-gallery-direction]");
+
+  if (!button) {
+    return;
+  }
+
+  const gallery = button.closest(".vehicle-media")?.querySelector(".vehicle-gallery");
+  const direction = Number(button.getAttribute("data-gallery-direction"));
+
+  if (!gallery || !direction) {
+    return;
+  }
+
+  gallery.scrollBy({
+    left: gallery.clientWidth * direction,
+    behavior: "smooth"
+  });
+}
+
 function renderVehicleCard(vehicle, availability, filters) {
   const typeText = getTypeLabel(vehicle.type);
   const statusClass = availability.isAvailable ? "is-available" : "is-unavailable";
@@ -481,7 +522,8 @@ function renderVehicleCard(vehicle, availability, filters) {
   const blockHint = availability.isAvailable
     ? getAvailableHint(availability, filters)
     : getUnavailableHint(availability, filters);
-  const imageUrl = vehicle.image || createVehiclePlaceholder(vehicle);
+  const images = getVehicleImages(vehicle);
+  const galleryImages = images.length ? images : [createVehiclePlaceholder(vehicle)];
 
   return `
     <article class="vehicle-card ${availability.isAvailable ? "is-available" : "is-unavailable"}">
@@ -490,7 +532,25 @@ function renderVehicleCard(vehicle, availability, filters) {
           <span class="vehicle-badge">${escapeHtml(typeText)}</span>
           <span class="vehicle-status ${statusClass}">${escapeHtml(statusText)}</span>
         </div>
-        <img src="${escapeAttribute(imageUrl)}" alt="${escapeAttribute(vehicle.name)}">
+        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0">
+          ${galleryImages.map((image, index) => `
+            <img
+              src="${escapeAttribute(image)}"
+              alt="${escapeAttribute(`${vehicle.name} - foto ${index + 1}`)}"
+              loading="${index === 0 ? "eager" : "lazy"}"
+            >
+          `).join("")}
+        </div>
+        ${images.length > 1 ? `
+          <span class="vehicle-photo-count">${escapeHtml(`${images.length} fotos`)}</span>
+          <div class="vehicle-gallery-controls">
+            <button type="button" data-gallery-direction="-1" aria-label="Foto anterior">&lt;</button>
+            <button type="button" data-gallery-direction="1" aria-label="Foto siguiente">&gt;</button>
+          </div>
+          <div class="vehicle-gallery-dots" aria-hidden="true">
+            ${images.map(() => "<span></span>").join("")}
+          </div>
+        ` : ""}
       </div>
 
       <div class="vehicle-content">
@@ -563,7 +623,7 @@ function renderAdmin() {
     refs.vehicleTransmission.value = editingVehicle.transmission;
     refs.vehicleFuel.value = editingVehicle.fuel;
     refs.vehicleImageFile.value = "";
-    setCurrentVehicleImage(editingVehicle.image);
+    setCurrentVehicleImages(getVehicleImages(editingVehicle));
     refs.vehicleSummary.value = editingVehicle.summary;
     refs.vehicleFeatures.value = editingVehicle.features.join(", ");
   } else {
@@ -638,6 +698,7 @@ function setSyncStatusMessage(elements, message, type) {
 function renderAdminVehicleItem(vehicle) {
   const availability = getVehicleAvailability(vehicle, null);
   const currentStatus = availability.isAvailable ? "Libre hoy" : "Ocupado hoy";
+  const imageCount = getVehicleImages(vehicle).length;
 
   return `
     <article class="admin-vehicle-item">
@@ -649,6 +710,7 @@ function renderAdminVehicleItem(vehicle) {
             <span>${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
             <span>${escapeHtml(vehicle.location)}</span>
             <span>${escapeHtml(currentStatus)}</span>
+            <span>${escapeHtml(`${imageCount} ${imageCount === 1 ? "foto" : "fotos"}`)}</span>
           </div>
         </div>
 
@@ -1135,6 +1197,7 @@ function normalizeVehicle(vehicle) {
     return null;
   }
 
+  const images = normalizeVehicleImages(vehicle.images, vehicle.image);
   const legacyDailyPrice = Number(vehicle.pricePerDay);
   const normalizedMonthlyPrice = Number(vehicle.pricePerMonth) > 0
     ? Number(vehicle.pricePerMonth)
@@ -1151,7 +1214,8 @@ function normalizeVehicle(vehicle) {
     passengers: Number(vehicle.passengers) > 0 ? Number(vehicle.passengers) : 5,
     transmission: String(vehicle.transmission || "Manual"),
     fuel: String(vehicle.fuel || "Gasolina"),
-    image: String(vehicle.image || ""),
+    image: images[0] || "",
+    images,
     summary: String(vehicle.summary || "Consulta por WhatsApp para confirmar condiciones."),
     features: Array.isArray(vehicle.features)
       ? vehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
@@ -1160,6 +1224,26 @@ function normalizeVehicle(vehicle) {
       ? sortBlocks(vehicle.blocks.map((block) => normalizeBlock(block)).filter(Boolean))
       : []
   };
+}
+
+function getVehicleImages(vehicle) {
+  return normalizeVehicleImages(vehicle?.images, vehicle?.image);
+}
+
+function normalizeVehicleImages(images, legacyImage = "") {
+  const rawImages = Array.isArray(images)
+    ? images
+    : images && typeof images === "object"
+      ? Object.values(images)
+      : [];
+  const normalizedImages = rawImages.map((image) => String(image || "").trim()).filter(Boolean);
+  const normalizedLegacyImage = String(legacyImage || "").trim();
+
+  if (normalizedLegacyImage && !normalizedImages.includes(normalizedLegacyImage)) {
+    normalizedImages.unshift(normalizedLegacyImage);
+  }
+
+  return normalizedImages;
 }
 
 function normalizeBlock(block) {
@@ -1401,9 +1485,13 @@ function resolveSelectedBlockVehicleId() {
 }
 
 async function readVehicleForm() {
-  const uploadedImage = refs.vehicleImageFile.files?.[0]
-    ? await optimizeVehicleImageFile(refs.vehicleImageFile.files[0])
-    : null;
+  if (state.ui.vehicleImageSelectionPromise) {
+    await state.ui.vehicleImageSelectionPromise;
+  } else if (refs.vehicleImageFile.files?.length) {
+    await queueVehicleImageSelection();
+  }
+
+  const images = getCurrentVehicleImages();
 
   return {
     id: refs.vehicleId.value || "",
@@ -1414,7 +1502,8 @@ async function readVehicleForm() {
     passengers: Number(refs.vehiclePassengers.value),
     transmission: refs.vehicleTransmission.value.trim(),
     fuel: refs.vehicleFuel.value.trim(),
-    image: uploadedImage ?? getCurrentVehicleImage(),
+    image: images[0] || "",
+    images,
     summary: refs.vehicleSummary.value.trim(),
     features: refs.vehicleFeatures.value.split(",").map((item) => item.trim()).filter(Boolean)
   };
@@ -1425,58 +1514,291 @@ function resetVehicleForm() {
   refs.vehicleId.value = "";
   refs.vehicleType.value = "coche";
   refs.vehicleImageFile.value = "";
-  setCurrentVehicleImage("");
+  setCurrentVehicleImages([]);
+}
+
+function queueVehicleImageSelection() {
+  const selectionPromise = handleVehicleImageSelection();
+  const queuedPromise = selectionPromise.finally(() => {
+    if (state.ui.vehicleImageSelectionPromise === queuedPromise) {
+      state.ui.vehicleImageSelectionPromise = null;
+    }
+  });
+
+  state.ui.vehicleImageSelectionPromise = queuedPromise;
+  return queuedPromise;
 }
 
 async function handleVehicleImageSelection() {
-  const file = refs.vehicleImageFile.files?.[0];
+  const files = Array.from(refs.vehicleImageFile.files || []);
 
-  if (!file) {
-    updateVehicleImagePreview(getCurrentVehicleImage());
+  if (!files.length) {
+    updateVehicleImagesList();
     return;
   }
 
-  if (!isSupportedVehicleImage(file)) {
+  if (files.some((file) => !isSupportedVehicleImage(file))) {
     refs.vehicleImageFile.value = "";
     throw new Error("Solo se permiten archivos JPG o PNG.");
   }
 
   try {
-    const previewImage = await readFileAsDataUrl(file);
-    updateVehicleImagePreview(previewImage);
-    setMessage(refs.vehicleFormMessage, "Imagen lista para guardar.", "success");
+    setMessage(refs.vehicleFormMessage, `Procesando ${files.length} ${files.length === 1 ? "foto" : "fotos"}...`);
+    const images = [];
+
+    for (const file of files) {
+      images.push(await optimizeVehicleImageFile(file));
+    }
+
+    addCurrentVehicleImages(images);
+    refs.vehicleImageFile.value = "";
+    setMessage(
+      refs.vehicleFormMessage,
+      `${images.length} ${images.length === 1 ? "foto anadida" : "fotos anadidas"}.`,
+      "success"
+    );
   } catch (error) {
     refs.vehicleImageFile.value = "";
-    updateVehicleImagePreview(getCurrentVehicleImage());
     setMessage(refs.vehicleFormMessage, "No se pudo cargar la imagen seleccionada.", "error");
+    throw error;
   }
 }
 
 function clearVehicleImage() {
   refs.vehicleImageFile.value = "";
-  setCurrentVehicleImage("");
+  setCurrentVehicleImages([]);
+  closeVehicleImageCropper();
 }
 
-function getCurrentVehicleImage() {
-  return refs.vehicleForm.dataset.currentImage || "";
+function getCurrentVehicleImages() {
+  return [...state.ui.currentVehicleImages];
 }
 
-function setCurrentVehicleImage(image) {
-  refs.vehicleForm.dataset.currentImage = image || "";
-  updateVehicleImagePreview(image || "");
+function setCurrentVehicleImages(images) {
+  state.ui.currentVehicleImages = normalizeVehicleImages(images);
+  updateVehicleImagesList();
+
+  if (
+    state.ui.croppingImageIndex !== null &&
+    !state.ui.currentVehicleImages[state.ui.croppingImageIndex]
+  ) {
+    closeVehicleImageCropper();
+  }
 }
 
-function updateVehicleImagePreview(image) {
-  const hasImage = Boolean(image);
-  refs.vehicleImagePreviewImg.classList.toggle("hidden", !hasImage);
-  refs.vehicleImagePreviewEmpty.classList.toggle("hidden", hasImage);
+function addCurrentVehicleImages(images) {
+  setCurrentVehicleImages([...getCurrentVehicleImages(), ...images]);
+}
 
-  if (hasImage) {
-    refs.vehicleImagePreviewImg.src = image;
+function updateVehicleImagesList() {
+  const images = getCurrentVehicleImages();
+
+  refs.vehicleImagesList.innerHTML = images.length
+    ? images.map(renderVehicleImageItem).join("")
+    : `<p class="image-upload-empty">Sin fotos subidas</p>`;
+}
+
+function renderVehicleImageItem(image, index) {
+  return `
+    <article class="image-upload-item ${index === 0 ? "is-primary" : ""}">
+      <img src="${escapeAttribute(image)}" alt="${escapeAttribute(`Foto ${index + 1} del vehiculo`)}">
+      <div class="image-upload-item-body">
+        <strong>${escapeHtml(index === 0 ? `Foto ${index + 1} - principal` : `Foto ${index + 1}`)}</strong>
+        <div class="image-upload-item-actions">
+          ${index === 0 ? "" : `
+            <button class="mini-button" type="button" data-set-primary-image="${index}">
+              Principal
+            </button>
+          `}
+          <button class="mini-button" type="button" data-crop-image="${index}">
+            Ajustar recorte
+          </button>
+          <button class="mini-button danger" type="button" data-remove-image="${index}">
+            Quitar
+          </button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function handleVehicleImagesListClick(event) {
+  const primaryButton = event.target.closest("[data-set-primary-image]");
+  const cropButton = event.target.closest("[data-crop-image]");
+  const removeButton = event.target.closest("[data-remove-image]");
+
+  if (primaryButton) {
+    moveVehicleImageToPrimary(Number(primaryButton.getAttribute("data-set-primary-image")));
     return;
   }
 
-  refs.vehicleImagePreviewImg.removeAttribute("src");
+  if (cropButton) {
+    openVehicleImageCropper(Number(cropButton.getAttribute("data-crop-image")));
+    return;
+  }
+
+  if (removeButton) {
+    removeCurrentVehicleImage(Number(removeButton.getAttribute("data-remove-image")));
+  }
+}
+
+function moveVehicleImageToPrimary(index) {
+  const images = getCurrentVehicleImages();
+
+  if (!Number.isInteger(index) || index <= 0 || index >= images.length) {
+    return;
+  }
+
+  const [selectedImage] = images.splice(index, 1);
+  images.unshift(selectedImage);
+  setCurrentVehicleImages(images);
+  setMessage(refs.vehicleFormMessage, "Foto principal actualizada.", "success");
+}
+
+function removeCurrentVehicleImage(index) {
+  const images = getCurrentVehicleImages();
+
+  if (!Number.isInteger(index) || index < 0 || index >= images.length) {
+    return;
+  }
+
+  images.splice(index, 1);
+  setCurrentVehicleImages(images);
+  setMessage(refs.vehicleFormMessage, "Foto eliminada.", "success");
+}
+
+function openVehicleImageCropper(index) {
+  const images = getCurrentVehicleImages();
+
+  if (!Number.isInteger(index) || index < 0 || index >= images.length) {
+    return;
+  }
+
+  state.ui.croppingImageIndex = index;
+  refs.vehicleImageCropZoom.value = "1";
+  refs.vehicleImageCropX.value = "0";
+  refs.vehicleImageCropY.value = "0";
+  refs.vehicleImageCropper.classList.remove("hidden");
+  refs.vehicleImageCropper.setAttribute("aria-hidden", "false");
+  refs.vehicleImageCropImg.onload = updateVehicleImageCropPreview;
+  refs.vehicleImageCropImg.src = images[index];
+
+  if (refs.vehicleImageCropImg.complete) {
+    updateVehicleImageCropPreview();
+  }
+
+  refs.vehicleImageCropper.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeVehicleImageCropper() {
+  state.ui.croppingImageIndex = null;
+  refs.vehicleImageCropper.classList.add("hidden");
+  refs.vehicleImageCropper.setAttribute("aria-hidden", "true");
+  refs.vehicleImageCropImg.onload = null;
+  refs.vehicleImageCropImg.removeAttribute("src");
+  refs.vehicleImageCropImg.removeAttribute("style");
+}
+
+function updateVehicleImageCropPreview() {
+  const cropMetrics = getVehicleCropMetrics();
+
+  if (!cropMetrics) {
+    return;
+  }
+
+  refs.vehicleImageCropImg.style.width = `${cropMetrics.drawWidth}px`;
+  refs.vehicleImageCropImg.style.height = `${cropMetrics.drawHeight}px`;
+  refs.vehicleImageCropImg.style.transform = `translate(${cropMetrics.drawX}px, ${cropMetrics.drawY}px)`;
+}
+
+function applyVehicleImageCrop() {
+  const index = state.ui.croppingImageIndex;
+  const images = getCurrentVehicleImages();
+
+  if (!Number.isInteger(index) || index < 0 || index >= images.length) {
+    return;
+  }
+
+  const cropMetrics = getVehicleCropMetrics();
+  const contextImage = refs.vehicleImageCropImg;
+
+  if (!cropMetrics || !contextImage.naturalWidth || !contextImage.naturalHeight) {
+    setMessage(refs.vehicleFormMessage, "No se pudo preparar el recorte.", "error");
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = cropMetrics.outputWidth;
+  canvas.height = cropMetrics.outputHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    setMessage(refs.vehicleFormMessage, "Tu navegador no pudo aplicar el recorte.", "error");
+    return;
+  }
+
+  const scaleX = canvas.width / cropMetrics.stageWidth;
+  const scaleY = canvas.height / cropMetrics.stageHeight;
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(
+    contextImage,
+    cropMetrics.drawX * scaleX,
+    cropMetrics.drawY * scaleY,
+    cropMetrics.drawWidth * scaleX,
+    cropMetrics.drawHeight * scaleY
+  );
+
+  images[index] = canvas.toDataURL("image/jpeg", 0.84);
+  setCurrentVehicleImages(images);
+  closeVehicleImageCropper();
+  setMessage(refs.vehicleFormMessage, "Recorte aplicado. Guarda el vehiculo para publicarlo.", "success");
+}
+
+function getVehicleCropMetrics() {
+  if (state.ui.croppingImageIndex === null || !refs.vehicleImageCropImg.naturalWidth) {
+    return null;
+  }
+
+  const stageRect = refs.vehicleImageCropStage.getBoundingClientRect();
+  const stageWidth = stageRect.width || refs.vehicleImageCropStage.clientWidth;
+  const stageHeight = stageRect.height || refs.vehicleImageCropStage.clientHeight;
+
+  if (!stageWidth || !stageHeight) {
+    return null;
+  }
+
+  const imageRatio = refs.vehicleImageCropImg.naturalWidth / refs.vehicleImageCropImg.naturalHeight;
+  const stageRatio = stageWidth / stageHeight;
+  const baseDimensions = imageRatio > stageRatio
+    ? {
+        width: stageHeight * imageRatio,
+        height: stageHeight
+      }
+    : {
+        width: stageWidth,
+        height: stageWidth / imageRatio
+      };
+  const zoom = clamp(Number(refs.vehicleImageCropZoom.value) || 1, 1, 3);
+  const offsetPercentX = clamp(Number(refs.vehicleImageCropX.value) || 0, -100, 100);
+  const offsetPercentY = clamp(Number(refs.vehicleImageCropY.value) || 0, -100, 100);
+  const drawWidth = baseDimensions.width * zoom;
+  const drawHeight = baseDimensions.height * zoom;
+  const maxOffsetX = Math.max(0, (drawWidth - stageWidth) / 2);
+  const maxOffsetY = Math.max(0, (drawHeight - stageHeight) / 2);
+  const offsetX = (offsetPercentX / 100) * maxOffsetX;
+  const offsetY = (offsetPercentY / 100) * maxOffsetY;
+
+  return {
+    stageWidth,
+    stageHeight,
+    drawWidth,
+    drawHeight,
+    drawX: (stageWidth - drawWidth) / 2 + offsetX,
+    drawY: (stageHeight - drawHeight) / 2 + offsetY,
+    outputWidth: 1400,
+    outputHeight: 875
+  };
 }
 
 function isSupportedVehicleImage(file) {
@@ -1680,6 +2002,10 @@ function toIsoDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function createId(prefix) {

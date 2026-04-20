@@ -61,6 +61,7 @@ function init() {
   cacheDom();
   state.data = loadState();
   state.ui.blockVehicleId = state.data.vehicles[0]?.id ?? null;
+  applyVehicleHash({ render: false, scroll: false });
 
   bindPublicEvents();
   bindAdminEvents();
@@ -168,6 +169,20 @@ function bindPublicEvents() {
     closeMenu();
     closeLoginModal();
     closeAdminPanel();
+  });
+
+  window.addEventListener("popstate", () => {
+    if (!applyVehicleHash({ scroll: true })) {
+      resetVehicleDetailView();
+      renderPublic();
+    }
+  });
+
+  window.addEventListener("hashchange", () => {
+    if (!applyVehicleHash({ scroll: true })) {
+      resetVehicleDetailView();
+      renderPublic();
+    }
   });
 
   refs.searchForm.addEventListener("submit", (event) => {
@@ -515,7 +530,13 @@ function renderPublic() {
   refs.fleetGrid.innerHTML = visibleVehicles.map(({ vehicle, availability }) => renderVehicleCard(vehicle, availability, filters)).join("");
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
 
-  const activeVehicleState = visibleVehicles.find(({ vehicle }) => vehicle.id === state.ui.activeVehicleId) || null;
+  const activeVehicle = state.ui.activeVehicleId ? findVehicleById(state.ui.activeVehicleId) : null;
+  const activeVehicleState = activeVehicle
+    ? {
+        vehicle: activeVehicle,
+        availability: getVehicleAvailability(activeVehicle, filters.range)
+      }
+    : null;
   const isDetailView = Boolean(activeVehicleState);
   refs.catalogSection.classList.toggle("is-detail-view", isDetailView);
   document.body.classList.toggle("is-vehicle-detail-view", isDetailView);
@@ -523,20 +544,20 @@ function renderPublic() {
   refs.vehicleDetail.innerHTML = activeVehicleState
     ? renderVehicleDetail(activeVehicleState.vehicle, activeVehicleState.availability, filters)
     : "";
-
-  if (state.ui.activeVehicleId && !activeVehicleState) {
-    resetVehicleDetailView();
-    refs.catalogSection.classList.remove("is-detail-view");
-    document.body.classList.remove("is-vehicle-detail-view");
-  }
 }
 
 function handleVehicleGalleryControlClick(event) {
   const openButton = event.target.closest("[data-open-vehicle-detail]");
+  const copyButton = event.target.closest("[data-copy-vehicle-link]");
   const button = event.target.closest("[data-gallery-direction]");
 
+  if (copyButton) {
+    void copyVehicleDirectLink(copyButton.getAttribute("data-copy-vehicle-link"), copyButton);
+    return;
+  }
+
   if (openButton) {
-    openVehicleDetail(openButton.getAttribute("data-open-vehicle-detail"));
+    openVehicleDetail(openButton.getAttribute("data-open-vehicle-detail"), { updateUrl: true });
     return;
   }
 
@@ -695,7 +716,7 @@ function setGalleryIndex(gallery, nextIndex) {
   });
 }
 
-function openVehicleDetail(vehicleId) {
+function openVehicleDetail(vehicleId, options = {}) {
   const vehicle = findVehicleById(vehicleId);
 
   if (!vehicle) {
@@ -705,6 +726,11 @@ function openVehicleDetail(vehicleId) {
   state.ui.activeVehicleId = vehicleId;
   state.ui.activeVehicleImageIndex = 0;
   state.ui.catalogReturnY = window.scrollY || 0;
+
+  if (options.updateUrl) {
+    setVehicleHash(vehicleId);
+  }
+
   renderPublic();
   refs.catalogSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -714,6 +740,11 @@ function closeVehicleDetail(options = {}) {
   state.ui.activeVehicleId = null;
   state.ui.activeVehicleImageIndex = 0;
   state.ui.catalogReturnY = 0;
+
+  if (options.clearUrl !== false) {
+    clearVehicleHash();
+  }
+
   renderPublic();
 
   if (options.restoreScroll) {
@@ -723,10 +754,15 @@ function closeVehicleDetail(options = {}) {
   }
 }
 
-function resetVehicleDetailView() {
+function resetVehicleDetailView(options = {}) {
   state.ui.activeVehicleId = null;
   state.ui.activeVehicleImageIndex = 0;
   state.ui.catalogReturnY = 0;
+
+  if (options.clearUrl !== false) {
+    clearVehicleHash();
+  }
+
   refs.catalogSection.classList.remove("is-detail-view");
   document.body.classList.remove("is-vehicle-detail-view");
   refs.vehicleDetail.classList.add("hidden");
@@ -735,9 +771,15 @@ function resetVehicleDetailView() {
 
 function handleVehicleDetailClick(event) {
   const closeButton = event.target.closest("[data-close-vehicle-detail]");
+  const copyButton = event.target.closest("[data-copy-vehicle-link]");
   const galleryButton = event.target.closest("[data-gallery-direction]");
   const directionButton = event.target.closest("[data-detail-gallery-direction]");
   const thumbnailButton = event.target.closest("[data-detail-image-index]");
+
+  if (copyButton) {
+    void copyVehicleDirectLink(copyButton.getAttribute("data-copy-vehicle-link"), copyButton);
+    return;
+  }
 
   if (closeButton) {
     closeVehicleDetail({ restoreScroll: true });
@@ -898,6 +940,9 @@ function renderVehicleCard(vehicle, availability, filters) {
           <a class="vehicle-action primary" href="${escapeAttribute(whatsappUrl)}" target="_blank" rel="noreferrer">
             ${escapeHtml(actionLabel)}
           </a>
+          <button class="vehicle-action secondary" type="button" data-copy-vehicle-link="${escapeAttribute(vehicle.id)}">
+            Copiar link
+          </button>
           <a class="vehicle-action secondary" href="#proceso">
             Como reservar
           </a>
@@ -984,6 +1029,9 @@ function renderVehicleDetail(vehicle, availability, filters) {
             <a class="vehicle-action primary" href="${escapeAttribute(whatsappUrl)}" target="_blank" rel="noreferrer">
               ${escapeHtml(actionLabel)}
             </a>
+            <button class="vehicle-action secondary" type="button" data-copy-vehicle-link="${escapeAttribute(vehicle.id)}">
+              Copiar link
+            </button>
             <button class="vehicle-action secondary" type="button" data-close-vehicle-detail>
               Regresar
             </button>
@@ -1012,6 +1060,127 @@ function renderVehicleDetail(vehicle, availability, filters) {
 function getVehicleGalleryImages(vehicle) {
   const images = getVehicleImages(vehicle);
   return images.length ? images : [createVehiclePlaceholder(vehicle)];
+}
+
+function getVehicleHash(vehicleId) {
+  return `vehiculo=${encodeURIComponent(vehicleId)}`;
+}
+
+function getVehicleIdFromHash() {
+  const rawHash = window.location.hash.replace(/^#/, "");
+
+  if (!rawHash) {
+    return "";
+  }
+
+  if (rawHash.startsWith("vehiculo=")) {
+    return decodeURIComponent(rawHash.slice("vehiculo=".length));
+  }
+
+  if (rawHash.startsWith("vehiculo/")) {
+    return decodeURIComponent(rawHash.slice("vehiculo/".length));
+  }
+
+  return "";
+}
+
+function getVehicleDirectUrl(vehicleId) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = getVehicleHash(vehicleId);
+  return url.toString();
+}
+
+function setVehicleHash(vehicleId) {
+  const url = new URL(window.location.href);
+  url.hash = getVehicleHash(vehicleId);
+  window.history.pushState({ vehicleId }, "", url);
+}
+
+function clearVehicleHash() {
+  if (!getVehicleIdFromHash()) {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  url.hash = "";
+  window.history.replaceState({}, "", url);
+}
+
+function applyVehicleHash(options = {}) {
+  const vehicleId = getVehicleIdFromHash();
+
+  if (!vehicleId) {
+    return false;
+  }
+
+  state.ui.activeVehicleId = vehicleId;
+  state.ui.activeVehicleImageIndex = 0;
+  state.ui.catalogReturnY = 0;
+
+  if (options.render !== false) {
+    renderPublic();
+  }
+
+  if (options.scroll && findVehicleById(vehicleId)) {
+    refs.catalogSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return Boolean(findVehicleById(vehicleId));
+}
+
+async function copyVehicleDirectLink(vehicleId, button) {
+  const vehicle = findVehicleById(vehicleId);
+
+  if (!vehicle) {
+    return;
+  }
+
+  const link = getVehicleDirectUrl(vehicleId);
+
+  try {
+    await copyText(link);
+    showCopyFeedback(button, "Link copiado");
+  } catch (error) {
+    window.prompt("Copia este link del vehiculo:", link);
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+}
+
+function showCopyFeedback(button, message) {
+  if (!button) {
+    return;
+  }
+
+  const originalText = button.dataset.originalText || button.textContent;
+  button.dataset.originalText = originalText;
+  button.textContent = message;
+  button.disabled = true;
+
+  window.setTimeout(() => {
+    button.textContent = originalText;
+    button.disabled = false;
+  }, 1600);
 }
 
 function renderAdmin() {
@@ -1424,6 +1593,7 @@ function applySharedState(nextState) {
   state.data = normalizeState(nextState);
   persistLocalState(state.data);
   reconcileUiWithData();
+  applyVehicleHash({ render: false, scroll: false });
   syncGlobalWhatsappLinks();
   renderPublic();
   renderAdmin();

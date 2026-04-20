@@ -31,7 +31,9 @@ const state = {
     calendarMonth: startOfMonth(new Date()),
     currentVehicleImages: [],
     croppingImageIndex: null,
-    vehicleImageSelectionPromise: null
+    vehicleImageSelectionPromise: null,
+    activeVehicleId: null,
+    activeVehicleImageIndex: 0
   },
   sync: {
     auth: null,
@@ -76,6 +78,7 @@ function cacheDom() {
   refs.searchInput = document.getElementById("searchInput");
   refs.resetFiltersBtn = document.getElementById("resetFiltersBtn");
   refs.fleetGrid = document.getElementById("fleetGrid");
+  refs.vehicleDetail = document.getElementById("vehicleDetail");
   refs.emptyState = document.getElementById("emptyState");
   refs.heroWhatsappLink = document.getElementById("heroWhatsappLink");
   refs.menuWhatsappLink = document.getElementById("menuWhatsappLink");
@@ -167,6 +170,7 @@ function bindPublicEvents() {
   refs.searchForm.addEventListener("submit", (event) => {
     event.preventDefault();
     normalizeRentalFilters();
+    closeVehicleDetail();
     renderPublic();
     document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -174,19 +178,25 @@ function bindPublicEvents() {
   [refs.filterStart, refs.filterTerm, refs.filterType].forEach((element) => {
     element.addEventListener("change", () => {
       normalizeRentalFilters();
+      closeVehicleDetail();
       renderPublic();
     });
   });
 
-  refs.searchInput.addEventListener("input", renderPublic);
+  refs.searchInput.addEventListener("input", () => {
+    closeVehicleDetail();
+    renderPublic();
+  });
 
   refs.fleetGrid.addEventListener("click", handleVehicleGalleryControlClick);
+  refs.vehicleDetail.addEventListener("click", handleVehicleDetailClick);
 
   refs.resetFiltersBtn.addEventListener("click", () => {
     refs.filterStart.value = "";
     refs.filterTerm.value = "1";
     refs.filterType.value = "all";
     refs.searchInput.value = "";
+    closeVehicleDetail();
     renderPublic();
   });
 
@@ -496,10 +506,22 @@ function renderPublic() {
 
   refs.fleetGrid.innerHTML = visibleVehicles.map(({ vehicle, availability }) => renderVehicleCard(vehicle, availability, filters)).join("");
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
+
+  const activeVehicleState = visibleVehicles.find(({ vehicle }) => vehicle.id === state.ui.activeVehicleId) || null;
+  refs.vehicleDetail.classList.toggle("hidden", !activeVehicleState);
+  refs.vehicleDetail.innerHTML = activeVehicleState
+    ? renderVehicleDetail(activeVehicleState.vehicle, activeVehicleState.availability, filters)
+    : "";
 }
 
 function handleVehicleGalleryControlClick(event) {
+  const openButton = event.target.closest("[data-open-vehicle-detail]");
   const button = event.target.closest("[data-gallery-direction]");
+
+  if (openButton) {
+    openVehicleDetail(openButton.getAttribute("data-open-vehicle-detail"));
+    return;
+  }
 
   if (!button) {
     return;
@@ -512,10 +534,93 @@ function handleVehicleGalleryControlClick(event) {
     return;
   }
 
-  gallery.scrollBy({
-    left: gallery.clientWidth * direction,
-    behavior: "smooth"
+  rotateGallery(gallery, direction);
+}
+
+function rotateGallery(gallery, direction) {
+  const images = Array.from(gallery.querySelectorAll("[data-gallery-image]"));
+
+  if (!images.length) {
+    return;
+  }
+
+  const currentIndex = Number(gallery.dataset.galleryIndex || "0");
+  const nextIndex = (currentIndex + direction + images.length) % images.length;
+  setGalleryIndex(gallery, nextIndex);
+}
+
+function setGalleryIndex(gallery, nextIndex) {
+  const images = Array.from(gallery.querySelectorAll("[data-gallery-image]"));
+  const dots = Array.from(gallery.closest(".vehicle-media")?.querySelectorAll("[data-gallery-dot]") || []);
+
+  gallery.dataset.galleryIndex = String(nextIndex);
+  images.forEach((image, index) => {
+    image.classList.toggle("is-active", index === nextIndex);
   });
+  dots.forEach((dot, index) => {
+    dot.classList.toggle("is-active", index === nextIndex);
+  });
+}
+
+function openVehicleDetail(vehicleId) {
+  const vehicle = findVehicleById(vehicleId);
+
+  if (!vehicle) {
+    return;
+  }
+
+  state.ui.activeVehicleId = vehicleId;
+  state.ui.activeVehicleImageIndex = 0;
+  renderPublic();
+  refs.vehicleDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeVehicleDetail() {
+  state.ui.activeVehicleId = null;
+  state.ui.activeVehicleImageIndex = 0;
+  refs.vehicleDetail.classList.add("hidden");
+  refs.vehicleDetail.innerHTML = "";
+}
+
+function handleVehicleDetailClick(event) {
+  const closeButton = event.target.closest("[data-close-vehicle-detail]");
+  const directionButton = event.target.closest("[data-detail-gallery-direction]");
+  const thumbnailButton = event.target.closest("[data-detail-image-index]");
+
+  if (closeButton) {
+    closeVehicleDetail();
+    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (directionButton) {
+    rotateVehicleDetailImage(Number(directionButton.getAttribute("data-detail-gallery-direction")));
+    return;
+  }
+
+  if (thumbnailButton) {
+    state.ui.activeVehicleImageIndex = Number(thumbnailButton.getAttribute("data-detail-image-index")) || 0;
+    renderPublic();
+    refs.vehicleDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function rotateVehicleDetailImage(direction) {
+  const vehicle = findVehicleById(state.ui.activeVehicleId);
+
+  if (!vehicle || !direction) {
+    return;
+  }
+
+  const imageCount = getVehicleGalleryImages(vehicle).length;
+
+  if (!imageCount) {
+    return;
+  }
+
+  state.ui.activeVehicleImageIndex = (state.ui.activeVehicleImageIndex + direction + imageCount) % imageCount;
+  renderPublic();
+  refs.vehicleDetail.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderVehicleCard(vehicle, availability, filters) {
@@ -528,7 +633,7 @@ function renderVehicleCard(vehicle, availability, filters) {
     ? getAvailableHint(availability, filters)
     : getUnavailableHint(availability, filters);
   const images = getVehicleImages(vehicle);
-  const galleryImages = images.length ? images : [createVehiclePlaceholder(vehicle)];
+  const galleryImages = getVehicleGalleryImages(vehicle);
 
   return `
     <article class="vehicle-card ${availability.isAvailable ? "is-available" : "is-unavailable"}">
@@ -537,9 +642,11 @@ function renderVehicleCard(vehicle, availability, filters) {
           <span class="vehicle-badge">${escapeHtml(typeText)}</span>
           <span class="vehicle-status ${statusClass}">${escapeHtml(statusText)}</span>
         </div>
-        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0">
+        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="0">
           ${galleryImages.map((image, index) => `
             <img
+              class="${index === 0 ? "is-active" : ""}"
+              data-gallery-image
               src="${escapeAttribute(image)}"
               alt="${escapeAttribute(`${vehicle.name} - foto ${index + 1}`)}"
               loading="${index === 0 ? "eager" : "lazy"}"
@@ -553,7 +660,7 @@ function renderVehicleCard(vehicle, availability, filters) {
             <button type="button" data-gallery-direction="1" aria-label="Foto siguiente">&gt;</button>
           </div>
           <div class="vehicle-gallery-dots" aria-hidden="true">
-            ${images.map(() => "<span></span>").join("")}
+            ${images.map((image, index) => `<span class="${index === 0 ? "is-active" : ""}" data-gallery-dot></span>`).join("")}
           </div>
         ` : ""}
       </div>
@@ -561,7 +668,11 @@ function renderVehicleCard(vehicle, availability, filters) {
       <div class="vehicle-content">
         <div class="vehicle-title">
           <div>
-            <h3>${escapeHtml(vehicle.name)}</h3>
+            <h3>
+              <button type="button" class="vehicle-name-link" data-open-vehicle-detail="${escapeAttribute(vehicle.id)}">
+                ${escapeHtml(vehicle.name)}
+              </button>
+            </h3>
             <p class="vehicle-hint">${escapeHtml(vehicle.location)}</p>
           </div>
           <span class="vehicle-price">${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
@@ -605,6 +716,100 @@ function renderVehicleCard(vehicle, availability, filters) {
       </div>
     </article>
   `;
+}
+
+function renderVehicleDetail(vehicle, availability, filters) {
+  const images = getVehicleGalleryImages(vehicle);
+  const imageIndex = Math.min(state.ui.activeVehicleImageIndex, images.length - 1);
+  const activeImage = images[imageIndex] || createVehiclePlaceholder(vehicle);
+  const whatsappUrl = buildVehicleWhatsappUrl(vehicle, availability, filters);
+  const actionLabel = availability.isAvailable ? "Consultar por WhatsApp" : "Pedir alternativa";
+  const blockHint = availability.isAvailable
+    ? getAvailableHint(availability, filters)
+    : getUnavailableHint(availability, filters);
+
+  return `
+    <article class="vehicle-detail-card">
+      <button class="vehicle-detail-back" type="button" data-close-vehicle-detail>
+        Volver al catalogo
+      </button>
+
+      <div class="vehicle-detail-layout">
+        <div class="vehicle-detail-media">
+          <img src="${escapeAttribute(activeImage)}" alt="${escapeAttribute(`${vehicle.name} - foto ampliada`)}">
+          ${images.length > 1 ? `
+            <div class="vehicle-detail-controls">
+              <button type="button" data-detail-gallery-direction="-1" aria-label="Foto anterior">&lt;</button>
+              <span>${escapeHtml(`${imageIndex + 1} / ${images.length}`)}</span>
+              <button type="button" data-detail-gallery-direction="1" aria-label="Foto siguiente">&gt;</button>
+            </div>
+          ` : ""}
+        </div>
+
+        <div class="vehicle-detail-content">
+          <p class="eyebrow">${escapeHtml(getTypeLabel(vehicle.type))}</p>
+          <h3>${escapeHtml(vehicle.name)}</h3>
+          <p class="vehicle-hint">${escapeHtml(vehicle.location)}</p>
+          <p class="vehicle-detail-price">${escapeHtml(formatPrice(vehicle.pricePerMonth))}</p>
+          <p>${escapeHtml(vehicle.summary)}</p>
+
+          <dl class="vehicle-meta">
+            <div>
+              <dt>Plazas</dt>
+              <dd>${escapeHtml(String(vehicle.passengers))}</dd>
+            </div>
+            <div>
+              <dt>Transmision</dt>
+              <dd>${escapeHtml(vehicle.transmission)}</dd>
+            </div>
+            <div>
+              <dt>Combustible</dt>
+              <dd>${escapeHtml(vehicle.fuel)}</dd>
+            </div>
+            <div>
+              <dt>Bloqueos</dt>
+              <dd>${escapeHtml(String(vehicle.blocks.length))}</dd>
+            </div>
+          </dl>
+
+          <ul class="feature-list">
+            ${vehicle.features.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}
+          </ul>
+
+          <p class="vehicle-status-copy">${escapeHtml(blockHint)}</p>
+
+          <div class="vehicle-actions">
+            <a class="vehicle-action primary" href="${escapeAttribute(whatsappUrl)}" target="_blank" rel="noreferrer">
+              ${escapeHtml(actionLabel)}
+            </a>
+            <button class="vehicle-action secondary" type="button" data-close-vehicle-detail>
+              Regresar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      ${images.length > 1 ? `
+        <div class="vehicle-detail-thumbs" aria-label="Fotos del vehiculo">
+          ${images.map((image, index) => `
+            <button
+              type="button"
+              class="${index === imageIndex ? "is-active" : ""}"
+              data-detail-image-index="${index}"
+              aria-label="${escapeAttribute(`Ver foto ${index + 1}`)}"
+            >
+              <img src="${escapeAttribute(image)}" alt="${escapeAttribute(`Miniatura ${index + 1} de ${vehicle.name}`)}">
+            </button>
+          `).join("")}
+        </div>
+      ` : ""}
+    </article>
+  `;
+}
+
+function getVehicleGalleryImages(vehicle) {
+  const images = getVehicleImages(vehicle);
+  return images.length ? images : [createVehiclePlaceholder(vehicle)];
 }
 
 function renderAdmin() {

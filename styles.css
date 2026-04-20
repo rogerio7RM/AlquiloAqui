@@ -560,17 +560,12 @@ textarea:focus-visible {
 }
 
 .vehicle-gallery {
-  display: flex;
+  position: relative;
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 220px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-
-.vehicle-gallery::-webkit-scrollbar {
-  display: none;
+  overflow: hidden;
 }
 
 .vehicle-gallery:focus-visible {
@@ -579,12 +574,18 @@ textarea:focus-visible {
 }
 
 .vehicle-gallery img {
-  flex: 0 0 100%;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   min-height: 220px;
   object-fit: cover;
-  scroll-snap-align: start;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.vehicle-gallery img.is-active {
+  opacity: 1;
 }
 
 .vehicle-badges {
@@ -647,7 +648,11 @@ textarea:focus-visible {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.vehicle-gallery-dots span.is-active {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .vehicle-badge,
@@ -692,6 +697,21 @@ textarea:focus-visible {
 
 .vehicle-title h3 {
   font-size: 2.2rem;
+}
+
+.vehicle-name-link {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.vehicle-name-link:hover,
+.vehicle-name-link:focus-visible {
+  color: var(--highlight);
+  text-decoration: underline;
+  text-underline-offset: 5px;
 }
 
 .vehicle-price {
@@ -781,6 +801,115 @@ textarea:focus-visible {
 .vehicle-action.secondary {
   border: 1px solid rgba(20, 34, 29, 0.14);
   background: rgba(255, 255, 255, 0.55);
+}
+
+.vehicle-detail {
+  margin-top: 24px;
+}
+
+.vehicle-detail-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(236, 246, 251, 0.94)),
+    var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.vehicle-detail-back {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: rgba(0, 64, 128, 0.08);
+  color: var(--surface-dark);
+  font-weight: 700;
+}
+
+.vehicle-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.vehicle-detail-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #0d2a43;
+}
+
+.vehicle-detail-media img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.vehicle-detail-controls {
+  position: absolute;
+  inset: auto 16px 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vehicle-detail-controls button,
+.vehicle-detail-controls span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: rgba(13, 42, 67, 0.72);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.vehicle-detail-content {
+  display: grid;
+  gap: 15px;
+}
+
+.vehicle-detail-content h3 {
+  margin: 0;
+  font-size: clamp(2.3rem, 5vw, 4.4rem);
+}
+
+.vehicle-detail-price {
+  margin: 0;
+  color: var(--surface-dark);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.vehicle-detail-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.vehicle-detail-thumbs button {
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.vehicle-detail-thumbs button.is-active {
+  border-color: var(--accent);
+}
+
+.vehicle-detail-thumbs img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  object-fit: cover;
 }
 
 .empty-state {
@@ -1304,7 +1433,8 @@ textarea:focus-visible {
 @media (max-width: 1080px) {
   .hero,
   .ops-section,
-  .admin-grid {
+  .admin-grid,
+  .vehicle-detail-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1346,7 +1476,8 @@ textarea:focus-visible {
   .site-footer,
   .modal-panel,
   .admin-panel,
-  .admin-section {
+  .admin-section,
+  .vehicle-detail-card {
     border-radius: 24px;
   }
 
@@ -1393,6 +1524,18 @@ textarea:focus-visible {
 
   .vehicle-title {
     flex-direction: column;
+  }
+
+  .vehicle-detail-card {
+    padding: 16px;
+  }
+
+  .vehicle-detail-controls {
+    inset: auto 10px 10px 10px;
+  }
+
+  .vehicle-detail-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .image-upload-item {

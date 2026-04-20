@@ -562,7 +562,8 @@ function rotateGallery(gallery, direction) {
 
 function setGalleryIndex(gallery, nextIndex) {
   const images = Array.from(gallery.querySelectorAll("[data-gallery-image]"));
-  const dots = Array.from(gallery.closest(".vehicle-media")?.querySelectorAll("[data-gallery-dot]") || []);
+  const galleryFrame = gallery.closest(".vehicle-media, .vehicle-detail-media");
+  const dots = Array.from(galleryFrame?.querySelectorAll("[data-gallery-dot]") || []);
 
   gallery.dataset.galleryIndex = String(nextIndex);
   gallery.style.setProperty("--gallery-index", String(nextIndex));
@@ -614,11 +615,26 @@ function resetVehicleDetailView() {
 
 function handleVehicleDetailClick(event) {
   const closeButton = event.target.closest("[data-close-vehicle-detail]");
+  const galleryButton = event.target.closest("[data-gallery-direction]");
   const directionButton = event.target.closest("[data-detail-gallery-direction]");
   const thumbnailButton = event.target.closest("[data-detail-image-index]");
 
   if (closeButton) {
     closeVehicleDetail({ restoreScroll: true });
+    return;
+  }
+
+  if (galleryButton) {
+    const detailMedia = galleryButton.closest(".vehicle-detail-media");
+    const gallery = detailMedia?.querySelector(".vehicle-gallery");
+    const direction = Number(galleryButton.getAttribute("data-gallery-direction"));
+
+    if (gallery && direction) {
+      rotateGallery(gallery, direction);
+      state.ui.activeVehicleImageIndex = Number(gallery.dataset.galleryIndex || "0");
+      syncVehicleDetailImageState();
+    }
+
     return;
   }
 
@@ -650,6 +666,30 @@ function rotateVehicleDetailImage(direction) {
   state.ui.activeVehicleImageIndex = (state.ui.activeVehicleImageIndex + direction + imageCount) % imageCount;
   renderPublic();
   refs.vehicleDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function syncVehicleDetailImageState() {
+  const vehicle = findVehicleById(state.ui.activeVehicleId);
+
+  if (!vehicle) {
+    return;
+  }
+
+  const images = getVehicleGalleryImages(vehicle);
+  const imageIndex = Math.min(state.ui.activeVehicleImageIndex, images.length - 1);
+  const count = refs.vehicleDetail.querySelector("[data-detail-gallery-count]");
+  const thumbnails = Array.from(refs.vehicleDetail.querySelectorAll("[data-detail-image-index]"));
+
+  if (count) {
+    count.textContent = `${imageIndex + 1} / ${images.length}`;
+  }
+
+  thumbnails.forEach((thumbnail) => {
+    thumbnail.classList.toggle(
+      "is-active",
+      Number(thumbnail.getAttribute("data-detail-image-index")) === imageIndex
+    );
+  });
 }
 
 function renderVehicleCard(vehicle, availability, filters) {
@@ -750,7 +790,6 @@ function renderVehicleCard(vehicle, availability, filters) {
 function renderVehicleDetail(vehicle, availability, filters) {
   const images = getVehicleGalleryImages(vehicle);
   const imageIndex = Math.min(state.ui.activeVehicleImageIndex, images.length - 1);
-  const activeImage = images[imageIndex] || createVehiclePlaceholder(vehicle);
   const whatsappUrl = buildVehicleWhatsappUrl(vehicle, availability, filters);
   const actionLabel = availability.isAvailable ? "Consultar por WhatsApp" : "Pedir alternativa";
   const blockHint = availability.isAvailable
@@ -765,12 +804,25 @@ function renderVehicleDetail(vehicle, availability, filters) {
 
       <div class="vehicle-detail-layout">
         <div class="vehicle-detail-media">
-          <img src="${escapeAttribute(activeImage)}" alt="${escapeAttribute(`${vehicle.name} - foto ampliada`)}">
+          <div class="vehicle-gallery" aria-label="Fotos ampliadas de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="${imageIndex}" style="--gallery-index: ${imageIndex}">
+            ${images.map((image, index) => `
+              <img
+                class="${index === imageIndex ? "is-active" : ""}"
+                data-gallery-image
+                src="${escapeAttribute(image)}"
+                alt="${escapeAttribute(`${vehicle.name} - foto ampliada ${index + 1}`)}"
+                loading="${index === imageIndex ? "eager" : "lazy"}"
+              >
+            `).join("")}
+          </div>
           ${images.length > 1 ? `
             <div class="vehicle-detail-controls">
-              <button type="button" data-detail-gallery-direction="-1" aria-label="Foto anterior">&lt;</button>
-              <span>${escapeHtml(`${imageIndex + 1} / ${images.length}`)}</span>
-              <button type="button" data-detail-gallery-direction="1" aria-label="Foto siguiente">&gt;</button>
+              <button type="button" data-gallery-direction="-1" aria-label="Foto anterior">&lt;</button>
+              <span data-detail-gallery-count>${escapeHtml(`${imageIndex + 1} / ${images.length}`)}</span>
+              <button type="button" data-gallery-direction="1" aria-label="Foto siguiente">&gt;</button>
+            </div>
+            <div class="vehicle-gallery-dots" aria-hidden="true">
+              ${images.map((image, index) => `<span class="${index === imageIndex ? "is-active" : ""}" data-gallery-dot></span>`).join("")}
             </div>
           ` : ""}
         </div>

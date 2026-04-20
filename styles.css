@@ -514,6 +514,21 @@ body.is-vehicle-detail-view .process-section {
   margin-top: 0;
 }
 
+body.is-vehicle-detail-view .site-header,
+body.is-vehicle-detail-view .hero,
+body.is-vehicle-detail-view .site-footer,
+body.is-vehicle-detail-view .floating-whatsapp {
+  display: none;
+}
+
+body.is-vehicle-detail-view .page-shell {
+  padding-top: 20px;
+}
+
+body.is-vehicle-detail-view .catalog-section {
+  margin-top: 0;
+}
+
 .section-heading {
   max-width: 860px;
   margin-bottom: 26px;
@@ -847,14 +862,15 @@ body.is-vehicle-detail-view .process-section {
 .vehicle-detail-media {
   position: relative;
   overflow: hidden;
+  aspect-ratio: 16 / 10;
+  min-height: 420px;
   border-radius: 18px;
   background: #0d2a43;
 }
 
-.vehicle-detail-media img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+.vehicle-detail-media .vehicle-gallery,
+.vehicle-detail-media .vehicle-gallery img {
+  min-height: 420px;
 }
 
 .vehicle-detail-controls {
@@ -1540,6 +1556,12 @@ body.is-vehicle-detail-view .process-section {
 
   .vehicle-detail-controls {
     inset: auto 10px 10px 10px;
+  }
+
+  .vehicle-detail-media,
+  .vehicle-detail-media .vehicle-gallery,
+  .vehicle-detail-media .vehicle-gallery img {
+    min-height: 260px;
   }
 
   .vehicle-detail-thumbs {

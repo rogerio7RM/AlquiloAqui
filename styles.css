@@ -502,6 +502,18 @@ textarea:focus-visible {
   margin-top: 40px;
 }
 
+.catalog-section.is-detail-view .section-heading,
+.catalog-section.is-detail-view .catalog-toolbar,
+.catalog-section.is-detail-view .fleet-grid,
+.catalog-section.is-detail-view .empty-state,
+body.is-vehicle-detail-view .process-section {
+  display: none;
+}
+
+.catalog-section.is-detail-view .vehicle-detail {
+  margin-top: 0;
+}
+
 .section-heading {
   max-width: 860px;
   margin-bottom: 26px;
@@ -561,7 +573,7 @@ textarea:focus-visible {
 
 .vehicle-gallery {
   position: relative;
-  display: block;
+  display: flex;
   width: 100%;
   height: 100%;
   min-height: 220px;
@@ -574,18 +586,14 @@ textarea:focus-visible {
 }
 
 .vehicle-gallery img {
-  position: absolute;
-  inset: 0;
+  flex: 0 0 100%;
   width: 100%;
   height: 100%;
   min-height: 220px;
   object-fit: cover;
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-
-.vehicle-gallery img.is-active {
   opacity: 1;
+  transform: translateX(calc(var(--gallery-index, 0) * -100%));
+  transition: transform 220ms ease;
 }
 
 .vehicle-badges {

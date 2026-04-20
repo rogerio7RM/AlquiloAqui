@@ -33,7 +33,8 @@ const state = {
     croppingImageIndex: null,
     vehicleImageSelectionPromise: null,
     activeVehicleId: null,
-    activeVehicleImageIndex: 0
+    activeVehicleImageIndex: 0,
+    catalogReturnY: 0
   },
   sync: {
     auth: null,
@@ -77,6 +78,7 @@ function cacheDom() {
   refs.filterType = document.getElementById("filterType");
   refs.searchInput = document.getElementById("searchInput");
   refs.resetFiltersBtn = document.getElementById("resetFiltersBtn");
+  refs.catalogSection = document.getElementById("catalogo");
   refs.fleetGrid = document.getElementById("fleetGrid");
   refs.vehicleDetail = document.getElementById("vehicleDetail");
   refs.emptyState = document.getElementById("emptyState");
@@ -170,7 +172,7 @@ function bindPublicEvents() {
   refs.searchForm.addEventListener("submit", (event) => {
     event.preventDefault();
     normalizeRentalFilters();
-    closeVehicleDetail();
+    resetVehicleDetailView();
     renderPublic();
     document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -178,13 +180,13 @@ function bindPublicEvents() {
   [refs.filterStart, refs.filterTerm, refs.filterType].forEach((element) => {
     element.addEventListener("change", () => {
       normalizeRentalFilters();
-      closeVehicleDetail();
+      resetVehicleDetailView();
       renderPublic();
     });
   });
 
   refs.searchInput.addEventListener("input", () => {
-    closeVehicleDetail();
+    resetVehicleDetailView();
     renderPublic();
   });
 
@@ -196,7 +198,7 @@ function bindPublicEvents() {
     refs.filterTerm.value = "1";
     refs.filterType.value = "all";
     refs.searchInput.value = "";
-    closeVehicleDetail();
+    resetVehicleDetailView();
     renderPublic();
   });
 
@@ -508,10 +510,19 @@ function renderPublic() {
   refs.emptyState.classList.toggle("hidden", visibleVehicles.length > 0);
 
   const activeVehicleState = visibleVehicles.find(({ vehicle }) => vehicle.id === state.ui.activeVehicleId) || null;
+  const isDetailView = Boolean(activeVehicleState);
+  refs.catalogSection.classList.toggle("is-detail-view", isDetailView);
+  document.body.classList.toggle("is-vehicle-detail-view", isDetailView);
   refs.vehicleDetail.classList.toggle("hidden", !activeVehicleState);
   refs.vehicleDetail.innerHTML = activeVehicleState
     ? renderVehicleDetail(activeVehicleState.vehicle, activeVehicleState.availability, filters)
     : "";
+
+  if (state.ui.activeVehicleId && !activeVehicleState) {
+    resetVehicleDetailView();
+    refs.catalogSection.classList.remove("is-detail-view");
+    document.body.classList.remove("is-vehicle-detail-view");
+  }
 }
 
 function handleVehicleGalleryControlClick(event) {
@@ -554,6 +565,7 @@ function setGalleryIndex(gallery, nextIndex) {
   const dots = Array.from(gallery.closest(".vehicle-media")?.querySelectorAll("[data-gallery-dot]") || []);
 
   gallery.dataset.galleryIndex = String(nextIndex);
+  gallery.style.setProperty("--gallery-index", String(nextIndex));
   images.forEach((image, index) => {
     image.classList.toggle("is-active", index === nextIndex);
   });
@@ -571,13 +583,31 @@ function openVehicleDetail(vehicleId) {
 
   state.ui.activeVehicleId = vehicleId;
   state.ui.activeVehicleImageIndex = 0;
+  state.ui.catalogReturnY = window.scrollY || 0;
   renderPublic();
-  refs.vehicleDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  refs.catalogSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function closeVehicleDetail() {
+function closeVehicleDetail(options = {}) {
+  const returnY = state.ui.catalogReturnY || 0;
   state.ui.activeVehicleId = null;
   state.ui.activeVehicleImageIndex = 0;
+  state.ui.catalogReturnY = 0;
+  renderPublic();
+
+  if (options.restoreScroll) {
+    window.setTimeout(() => {
+      window.scrollTo({ top: returnY, behavior: "smooth" });
+    }, 0);
+  }
+}
+
+function resetVehicleDetailView() {
+  state.ui.activeVehicleId = null;
+  state.ui.activeVehicleImageIndex = 0;
+  state.ui.catalogReturnY = 0;
+  refs.catalogSection.classList.remove("is-detail-view");
+  document.body.classList.remove("is-vehicle-detail-view");
   refs.vehicleDetail.classList.add("hidden");
   refs.vehicleDetail.innerHTML = "";
 }
@@ -588,8 +618,7 @@ function handleVehicleDetailClick(event) {
   const thumbnailButton = event.target.closest("[data-detail-image-index]");
 
   if (closeButton) {
-    closeVehicleDetail();
-    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    closeVehicleDetail({ restoreScroll: true });
     return;
   }
 
@@ -642,7 +671,7 @@ function renderVehicleCard(vehicle, availability, filters) {
           <span class="vehicle-badge">${escapeHtml(typeText)}</span>
           <span class="vehicle-status ${statusClass}">${escapeHtml(statusText)}</span>
         </div>
-        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="0">
+        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="0" style="--gallery-index: 0">
           ${galleryImages.map((image, index) => `
             <img
               class="${index === 0 ? "is-active" : ""}"

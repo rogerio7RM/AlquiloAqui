@@ -34,7 +34,8 @@ const state = {
     vehicleImageSelectionPromise: null,
     activeVehicleId: null,
     activeVehicleImageIndex: 0,
-    catalogReturnY: 0
+    catalogReturnY: 0,
+    galleryDrag: null
   },
   sync: {
     auth: null,
@@ -192,6 +193,11 @@ function bindPublicEvents() {
 
   refs.fleetGrid.addEventListener("click", handleVehicleGalleryControlClick);
   refs.vehicleDetail.addEventListener("click", handleVehicleDetailClick);
+  refs.fleetGrid.addEventListener("pointerdown", handleGalleryPointerDown);
+  refs.vehicleDetail.addEventListener("pointerdown", handleGalleryPointerDown);
+  document.addEventListener("pointermove", handleGalleryPointerMove, { passive: false });
+  document.addEventListener("pointerup", handleGalleryPointerEnd);
+  document.addEventListener("pointercancel", handleGalleryPointerCancel);
 
   refs.resetFiltersBtn.addEventListener("click", () => {
     refs.filterStart.value = "";
@@ -560,6 +566,119 @@ function rotateGallery(gallery, direction) {
   setGalleryIndex(gallery, nextIndex);
 }
 
+function handleGalleryPointerDown(event) {
+  const gallery = event.target.closest(".vehicle-gallery");
+
+  if (!gallery || event.target.closest("button, a, input, select, textarea")) {
+    return;
+  }
+
+  if (event.pointerType === "mouse" && event.button !== 0) {
+    return;
+  }
+
+  if (gallery.querySelectorAll("[data-gallery-image]").length < 2) {
+    return;
+  }
+
+  state.ui.galleryDrag = {
+    gallery,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    deltaX: 0,
+    isHorizontal: null
+  };
+
+  gallery.classList.add("is-dragging");
+  gallery.style.setProperty("--gallery-drag", "0px");
+
+  try {
+    gallery.setPointerCapture(event.pointerId);
+  } catch (error) {
+    // Pointer capture is best-effort; document listeners still handle the drag.
+  }
+}
+
+function handleGalleryPointerMove(event) {
+  const drag = state.ui.galleryDrag;
+
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  const deltaX = event.clientX - drag.startX;
+  const deltaY = event.clientY - drag.startY;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+
+  if (drag.isHorizontal === null && (absX > 8 || absY > 8)) {
+    drag.isHorizontal = absX > absY;
+  }
+
+  if (!drag.isHorizontal) {
+    return;
+  }
+
+  event.preventDefault();
+  drag.deltaX = deltaX;
+  drag.gallery.style.setProperty(
+    "--gallery-drag",
+    `${clamp(deltaX, -drag.gallery.clientWidth * 0.38, drag.gallery.clientWidth * 0.38)}px`
+  );
+}
+
+function handleGalleryPointerEnd(event) {
+  const drag = state.ui.galleryDrag;
+
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  finishGalleryPointerDrag(drag);
+}
+
+function handleGalleryPointerCancel(event) {
+  const drag = state.ui.galleryDrag;
+
+  if (!drag || drag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  drag.deltaX = 0;
+  finishGalleryPointerDrag(drag);
+}
+
+function finishGalleryPointerDrag(drag) {
+  const threshold = Math.max(44, drag.gallery.clientWidth * 0.16);
+  const shouldRotate = drag.isHorizontal && Math.abs(drag.deltaX) >= threshold;
+
+  drag.gallery.classList.remove("is-dragging");
+  drag.gallery.style.setProperty("--gallery-drag", "0px");
+
+  if (shouldRotate) {
+    rotateGallery(drag.gallery, drag.deltaX < 0 ? 1 : -1);
+    syncActiveDetailGallery(drag.gallery);
+  }
+
+  try {
+    drag.gallery.releasePointerCapture(drag.pointerId);
+  } catch (error) {
+    // Ignore release failures when the pointer was already released by the browser.
+  }
+
+  state.ui.galleryDrag = null;
+}
+
+function syncActiveDetailGallery(gallery) {
+  if (!gallery.closest(".vehicle-detail-media")) {
+    return;
+  }
+
+  state.ui.activeVehicleImageIndex = Number(gallery.dataset.galleryIndex || "0");
+  syncVehicleDetailImageState();
+}
+
 function setGalleryIndex(gallery, nextIndex) {
   const images = Array.from(gallery.querySelectorAll("[data-gallery-image]"));
   const galleryFrame = gallery.closest(".vehicle-media, .vehicle-detail-media");
@@ -567,6 +686,7 @@ function setGalleryIndex(gallery, nextIndex) {
 
   gallery.dataset.galleryIndex = String(nextIndex);
   gallery.style.setProperty("--gallery-index", String(nextIndex));
+  gallery.style.setProperty("--gallery-offset", `-${nextIndex * 100}%`);
   images.forEach((image, index) => {
     image.classList.toggle("is-active", index === nextIndex);
   });
@@ -631,8 +751,7 @@ function handleVehicleDetailClick(event) {
 
     if (gallery && direction) {
       rotateGallery(gallery, direction);
-      state.ui.activeVehicleImageIndex = Number(gallery.dataset.galleryIndex || "0");
-      syncVehicleDetailImageState();
+      syncActiveDetailGallery(gallery);
     }
 
     return;
@@ -711,7 +830,7 @@ function renderVehicleCard(vehicle, availability, filters) {
           <span class="vehicle-badge">${escapeHtml(typeText)}</span>
           <span class="vehicle-status ${statusClass}">${escapeHtml(statusText)}</span>
         </div>
-        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="0" style="--gallery-index: 0">
+        <div class="vehicle-gallery" aria-label="Fotos de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="0" style="--gallery-index: 0; --gallery-offset: 0%">
           ${galleryImages.map((image, index) => `
             <img
               class="${index === 0 ? "is-active" : ""}"
@@ -719,6 +838,7 @@ function renderVehicleCard(vehicle, availability, filters) {
               src="${escapeAttribute(image)}"
               alt="${escapeAttribute(`${vehicle.name} - foto ${index + 1}`)}"
               loading="${index === 0 ? "eager" : "lazy"}"
+              draggable="false"
             >
           `).join("")}
         </div>
@@ -804,7 +924,7 @@ function renderVehicleDetail(vehicle, availability, filters) {
 
       <div class="vehicle-detail-layout">
         <div class="vehicle-detail-media">
-          <div class="vehicle-gallery" aria-label="Fotos ampliadas de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="${imageIndex}" style="--gallery-index: ${imageIndex}">
+          <div class="vehicle-gallery" aria-label="Fotos ampliadas de ${escapeAttribute(vehicle.name)}" tabindex="0" data-gallery-index="${imageIndex}" style="--gallery-index: ${imageIndex}; --gallery-offset: -${imageIndex * 100}%">
             ${images.map((image, index) => `
               <img
                 class="${index === imageIndex ? "is-active" : ""}"
@@ -812,6 +932,7 @@ function renderVehicleDetail(vehicle, availability, filters) {
                 src="${escapeAttribute(image)}"
                 alt="${escapeAttribute(`${vehicle.name} - foto ampliada ${index + 1}`)}"
                 loading="${index === imageIndex ? "eager" : "lazy"}"
+                draggable="false"
               >
             `).join("")}
           </div>

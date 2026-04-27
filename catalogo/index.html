@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catalogo | Alquilo Aqui</title>
+  <meta
+    name="description"
+    content="Explora el catalogo de coches y furgonetas de Alquilo Aqui. Filtra por cuota mensual, marca, transmision, combustible, categoria, plazas y etiqueta ambiental."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="../public.css?v=20260427-model1">
+  <script src="../config.js" defer></script>
+  <script src="../public.js?v=20260427-model1" defer></script>
+</head>
+<body data-page="catalog" data-root-prefix="../">
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="../" aria-label="Ir al inicio de Alquilo Aqui">
+        <img src="../assets/logo-alquilo-aqui-transparent.png" alt="Alquilo Aqui">
+      </a>
+
+      <nav class="desktop-nav" aria-label="Navegacion principal">
+        <a href="../">Inicio</a>
+        <a href="../catalogo/">Catalogo</a>
+        <a href="../como-funciona/">Como funciona</a>
+      </nav>
+
+      <div class="header-actions">
+        <a class="icon-button" href="https://wa.me/34604982625" data-phone-generic target="_blank" rel="noreferrer" aria-label="Abrir WhatsApp">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <path d="M7.2 3.5h2.3c.4 0 .8.3.9.7l.9 4c.1.4 0 .8-.3 1.1l-1.5 1.5a14.5 14.5 0 0 0 4.7 4.7l1.5-1.5c.3-.3.7-.4 1.1-.3l4 .9c.4.1.7.5.7.9v2.3c0 .5-.4 1-.9 1.1-.9.1-1.8.2-2.6.2C10.5 20.1 3.9 13.5 3.9 5.9c0-.9.1-1.7.2-2.6.1-.5.6-.9 1.1-.9Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+        <a class="header-email" href="mailto:contacto@alquiloaqui.es" aria-label="Enviar email">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v9A1.5 1.5 0 0 1 18.5 18h-13A1.5 1.5 0 0 1 4 16.5v-9Z" stroke="currentColor" stroke-width="1.6"></path>
+            <path d="m5 7 7 5 7-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+      </div>
+
+      <button
+        class="menu-toggle"
+        type="button"
+        data-menu-toggle
+        aria-expanded="false"
+        aria-controls="mobileMenu"
+        aria-label="Abrir menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+
+    <div class="mobile-nav" id="mobileMenu" data-menu-panel hidden>
+      <div class="mobile-nav-panel">
+        <div class="mobile-nav-head">
+          <img src="../assets/logo-alquilo-aqui-transparent.png" alt="Alquilo Aqui">
+          <button class="mobile-nav-close" type="button" data-menu-close aria-label="Cerrar menu">
+            &times;
+          </button>
+        </div>
+        <a href="../" data-menu-close>Inicio</a>
+        <a href="../catalogo/" data-menu-close>Catalogo</a>
+        <a href="../como-funciona/" data-menu-close>Como funciona</a>
+        <a class="button primary" href="mailto:contacto@alquiloaqui.es">Escribir email</a>
+      </div>
+    </div>
+
+    <main>
+      <section class="page-hero">
+        <div class="page-hero-copy">
+          <p class="eyebrow">Catalogo disponible</p>
+          <h1>Filtra, compara y entra en la ficha exacta.</h1>
+          <p>
+            Esta pagina funciona como escaparate principal. Cada vehiculo abre su
+            propia subpagina y el CTA mantiene el contacto por WhatsApp.
+          </p>
+
+          <div class="page-hero-stats">
+            <div class="stat-card">
+              <strong data-fleet-count>0</strong>
+              <span>vehiculos visibles en total</span>
+            </div>
+            <div class="stat-card">
+              <strong data-min-price>--</strong>
+              <span>cuota mensual mas baja</span>
+            </div>
+            <div class="stat-card">
+              <strong>Filtros</strong>
+              <span>por precio, marca, categoria y etiqueta</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="catalog-layout">
+          <aside class="filter-card">
+            <h2>Filtros de Busqueda</h2>
+            <p>Encuentra el vehiculo ideal con filtros comerciales claros.</p>
+
+            <form class="filter-form" onsubmit="return false;">
+              <label class="field">
+                <span>Buscar</span>
+                <input id="catalogSearch" type="search" placeholder="Buscar vehiculo...">
+              </label>
+
+              <label class="field">
+                <span>Cuota Mensual</span>
+                <div class="price-range-card">
+                  <input id="catalogMinPrice" type="range">
+                  <input id="catalogMaxPrice" type="range">
+                  <div class="price-range-values">
+                    <span>Desde: <strong id="catalogMinPriceLabel">0€</strong></span>
+                    <span>Hasta: <strong id="catalogMaxPriceLabel">0€</strong></span>
+                  </div>
+                </div>
+              </label>
+
+              <label class="field">
+                <span>Marca</span>
+                <select id="catalogBrand"></select>
+              </label>
+
+              <label class="field">
+                <span>Transmision</span>
+                <select id="catalogTransmission"></select>
+              </label>
+
+              <label class="field">
+                <span>Combustible</span>
+                <select id="catalogFuel"></select>
+              </label>
+
+              <label class="field">
+                <span>Categoria</span>
+                <select id="catalogCategory"></select>
+              </label>
+
+              <label class="field">
+                <span>Nº de Plazas</span>
+                <select id="catalogPassengers"></select>
+              </label>
+
+              <label class="field">
+                <span>Etiqueta Ambiental</span>
+                <select id="catalogEnvironmentalTag"></select>
+              </label>
+
+              <button class="button secondary full" id="catalogReset" type="button">
+                Limpiar filtros
+              </button>
+            </form>
+          </aside>
+
+          <div>
+            <div class="results-head">
+              <div>
+                <strong id="catalogCount">0 vehiculos</strong>
+                <p id="catalogMeta">Ajusta el rango de cuota y combina filtros para afinar la busqueda.</p>
+              </div>
+            </div>
+
+            <div class="vehicle-grid" id="catalogGrid" aria-live="polite"></div>
+
+            <div class="empty-panel is-hidden" id="catalogEmpty">
+              <h3>Sin resultados con esos filtros</h3>
+              <p>Prueba a ampliar el rango de cuota o limpiar alguno de los filtros.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="cta-banner">
+          <div class="cta-banner-content">
+            <div>
+              <h2>Si el coche te encaja, el siguiente paso es WhatsApp.</h2>
+              <p>
+                No hace falta forzar un checkout largo en esta fase. La nueva estructura
+                primero ordena mejor el catalogo y luego manda contexto claro al contacto.
+              </p>
+            </div>
+            <a class="button secondary" href="https://wa.me/34604982625" data-whatsapp-generic target="_blank" rel="noreferrer">
+              Abrir WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Alquilo Aqui</strong>
+        <p>Catalogo publico renovado con fichas individuales y filtros claros.</p>
+      </div>
+      <a class="button primary" href="../como-funciona/">Ver el proceso</a>
+    </footer>
+  </div>
+</body>
+</html>

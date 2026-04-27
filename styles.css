@@ -1177,6 +1177,91 @@ body.is-vehicle-detail-view .catalog-section {
   gap: 14px;
 }
 
+.split-fields-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-section-block {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(0, 64, 128, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.form-section-head {
+  display: grid;
+  gap: 6px;
+}
+
+.form-section-head h4 {
+  margin: 0;
+  color: var(--surface-dark);
+  font-size: 1.05rem;
+}
+
+.form-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.price-plan-grid,
+.mileage-grid,
+.coverage-admin-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.price-plan-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mileage-grid,
+.coverage-admin-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mileage-admin-card,
+.coverage-admin-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(20, 34, 29, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.mileage-admin-card strong,
+.coverage-admin-card strong {
+  color: var(--surface-dark);
+}
+
+.coverage-admin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coverage-recommended-flag {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.coverage-recommended-flag input {
+  width: 18px;
+  min-height: 18px;
+  margin: 0;
+  accent-color: #105090;
+}
+
 .inline-actions {
   display: flex;
   gap: 12px;
@@ -1485,6 +1570,10 @@ body.is-vehicle-detail-view .catalog-section {
   .hero-stats,
   .process-grid,
   .split-fields,
+  .split-fields-3,
+  .price-plan-grid,
+  .mileage-grid,
+  .coverage-admin-grid,
   .site-footer {
     grid-template-columns: 1fr;
   }

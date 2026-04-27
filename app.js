@@ -21,6 +21,46 @@ const MONTHLY_TERMS = {
   "3": { label: "3 meses", months: 3 },
   "12plus": { label: "12 meses o mas", months: 12 }
 };
+const PRICE_PLAN_KEYS = ["1", "3", "6", "9", "12", "18"];
+const PRICE_PLAN_MULTIPLIERS = {
+  "1": 1.32,
+  "3": 1.22,
+  "6": 1.12,
+  "9": 1.07,
+  "12": 1.03,
+  "18": 1
+};
+const DEFAULT_MILEAGE_PLANS = [
+  { km: 800, surcharge: 0 },
+  { km: 1500, surcharge: 39 },
+  { km: 2000, surcharge: 59 }
+];
+const DEFAULT_COVERAGE_OPTIONS = [
+  {
+    id: "bronze",
+    name: "Bronce",
+    surcharge: 0,
+    description: "Franquicia 1200 EUR",
+    deposit: "Fianza 2 meses",
+    recommended: false
+  },
+  {
+    id: "silver",
+    name: "Plata",
+    surcharge: 49,
+    description: "Franquicia 300 EUR",
+    deposit: "Fianza 1 mes",
+    recommended: true
+  },
+  {
+    id: "gold",
+    name: "Oro",
+    surcharge: 219,
+    description: "Sin franquicia",
+    deposit: "Fianza 1 mes",
+    recommended: false
+  }
+];
 
 const state = {
   data: null,
@@ -106,12 +146,30 @@ function cacheDom() {
   refs.vehicleForm = document.getElementById("vehicleForm");
   refs.vehicleId = document.getElementById("vehicleId");
   refs.vehicleName = document.getElementById("vehicleName");
+  refs.vehicleVersionLabel = document.getElementById("vehicleVersionLabel");
   refs.vehicleType = document.getElementById("vehicleType");
+  refs.vehicleBrand = document.getElementById("vehicleBrand");
+  refs.vehicleEnvironmentalTag = document.getElementById("vehicleEnvironmentalTag");
   refs.vehiclePrice = document.getElementById("vehiclePrice");
+  refs.vehiclePrice1 = document.getElementById("vehiclePrice1");
+  refs.vehiclePrice3 = document.getElementById("vehiclePrice3");
+  refs.vehiclePrice6 = document.getElementById("vehiclePrice6");
+  refs.vehiclePrice9 = document.getElementById("vehiclePrice9");
+  refs.vehiclePrice12 = document.getElementById("vehiclePrice12");
+  refs.vehiclePrice18 = document.getElementById("vehiclePrice18");
   refs.vehicleLocation = document.getElementById("vehicleLocation");
   refs.vehiclePassengers = document.getElementById("vehiclePassengers");
   refs.vehicleTransmission = document.getElementById("vehicleTransmission");
   refs.vehicleFuel = document.getElementById("vehicleFuel");
+  refs.vehicleColor = document.getElementById("vehicleColor");
+  refs.vehicleKm1 = document.getElementById("vehicleKm1");
+  refs.vehicleKm1Price = document.getElementById("vehicleKm1Price");
+  refs.vehicleKm2 = document.getElementById("vehicleKm2");
+  refs.vehicleKm2Price = document.getElementById("vehicleKm2Price");
+  refs.vehicleKm3 = document.getElementById("vehicleKm3");
+  refs.vehicleKm3Price = document.getElementById("vehicleKm3Price");
+  refs.vehiclePricePlanInputs = Array.from(document.querySelectorAll("[data-price-plan-input]"));
+  refs.vehicleCoverageRows = Array.from(document.querySelectorAll("[data-coverage-index]"));
   refs.vehicleImageFile = document.getElementById("vehicleImageFile");
   refs.vehicleImagesList = document.getElementById("vehicleImagesList");
   refs.clearVehicleImageBtn = document.getElementById("clearVehicleImageBtn");
@@ -123,11 +181,16 @@ function cacheDom() {
   refs.vehicleImageCropY = document.getElementById("vehicleImageCropY");
   refs.applyImageCropBtn = document.getElementById("applyImageCropBtn");
   refs.cancelImageCropBtn = document.getElementById("cancelImageCropBtn");
+  refs.vehicleShowDescription = document.getElementById("vehicleShowDescription");
+  refs.vehicleShowCoverage = document.getElementById("vehicleShowCoverage");
   refs.vehicleSummary = document.getElementById("vehicleSummary");
   refs.vehicleFeatures = document.getElementById("vehicleFeatures");
   refs.vehicleFormMessage = document.getElementById("vehicleFormMessage");
   refs.cancelVehicleEditBtn = document.getElementById("cancelVehicleEditBtn");
   refs.adminVehicleList = document.getElementById("adminVehicleList");
+  refs.vehicleModal = document.getElementById("vehicleModal");
+  refs.settingsModal = document.getElementById("settingsModal");
+  refs.newVehicleBtn = document.getElementById("newVehicleBtn");
 
   refs.blockVehicleSelect = document.getElementById("blockVehicleSelect");
   refs.blockForm = document.getElementById("blockForm");
@@ -311,6 +374,20 @@ function bindAdminEvents() {
 
   refs.vehicleImagesList.addEventListener("click", handleVehicleImagesListClick);
 
+  refs.vehicleForm.addEventListener("change", (event) => {
+    if (!event.target.matches("[data-coverage-recommended]")) {
+      return;
+    }
+
+    refs.vehicleCoverageRows.forEach((row) => {
+      const checkbox = row.querySelector("[data-coverage-recommended]");
+
+      if (checkbox && checkbox !== event.target) {
+        checkbox.checked = false;
+      }
+    });
+  });
+
   [refs.vehicleImageCropZoom, refs.vehicleImageCropX, refs.vehicleImageCropY].forEach((control) => {
     control.addEventListener("input", updateVehicleImageCropPreview);
   });
@@ -330,8 +407,21 @@ function bindAdminEvents() {
       return;
     }
 
-    if (!vehicle.name || !vehicle.location || !vehicle.transmission || !vehicle.fuel || !vehicle.summary) {
+    if (
+      !vehicle.name ||
+      !vehicle.location ||
+      !vehicle.transmission ||
+      !vehicle.fuel ||
+      (vehicle.showDescription && !vehicle.summary)
+    ) {
       setMessage(refs.vehicleFormMessage, "Completa los campos obligatorios del vehiculo.", "error");
+      return;
+    }
+
+    const hasExplicitPrice = refs.vehiclePricePlanInputs.some((input) => Number(input?.value) > 0);
+
+    if (!hasExplicitPrice) {
+      setMessage(refs.vehicleFormMessage, "Define al menos un precio por periodo.", "error");
       return;
     }
 
@@ -339,14 +429,23 @@ function bindAdminEvents() {
 
     if (existingVehicle) {
       existingVehicle.name = vehicle.name;
+      existingVehicle.versionLabel = vehicle.versionLabel;
       existingVehicle.type = vehicle.type;
+      existingVehicle.brand = vehicle.brand;
+      existingVehicle.environmentalTag = vehicle.environmentalTag;
       existingVehicle.pricePerMonth = vehicle.pricePerMonth;
+      existingVehicle.pricePlans = vehicle.pricePlans;
       existingVehicle.location = vehicle.location;
       existingVehicle.passengers = vehicle.passengers;
       existingVehicle.transmission = vehicle.transmission;
       existingVehicle.fuel = vehicle.fuel;
+      existingVehicle.color = vehicle.color;
+      existingVehicle.mileagePlans = vehicle.mileagePlans;
+      existingVehicle.coverageOptions = vehicle.coverageOptions;
       existingVehicle.image = vehicle.image;
       existingVehicle.images = vehicle.images;
+      existingVehicle.showDescription = vehicle.showDescription;
+      existingVehicle.showCoverage = vehicle.showCoverage;
       existingVehicle.summary = vehicle.summary;
       existingVehicle.features = vehicle.features;
       setMessage(refs.vehicleFormMessage, "Vehiculo actualizado.", "success");
@@ -388,6 +487,12 @@ function bindAdminEvents() {
     setMessage(refs.vehicleFormMessage, "");
   });
 
+  refs.newVehicleBtn?.addEventListener("click", () => {
+    state.ui.editingVehicleId = null;
+    resetVehicleForm();
+    setMessage(refs.vehicleFormMessage, "");
+  });
+
   refs.adminVehicleList.addEventListener("click", (event) => {
     const editButton = event.target.closest("[data-edit-vehicle]");
     const deleteButton = event.target.closest("[data-delete-vehicle]");
@@ -398,6 +503,7 @@ function bindAdminEvents() {
       state.ui.editingVehicleId = vehicleId;
       state.ui.blockVehicleId = vehicleId;
       renderAdmin();
+      openVehicleModal();
       refs.vehicleName.focus();
       setMessage(refs.vehicleFormMessage, "Editando vehiculo.", "success");
       return;
@@ -1197,14 +1303,38 @@ function renderAdmin() {
   if (editingVehicle) {
     refs.vehicleId.value = editingVehicle.id;
     refs.vehicleName.value = editingVehicle.name;
+    if (refs.vehicleVersionLabel) {
+      refs.vehicleVersionLabel.value = editingVehicle.versionLabel || "";
+    }
     refs.vehicleType.value = editingVehicle.type;
+    if (refs.vehicleBrand) {
+      refs.vehicleBrand.value = editingVehicle.brand || "";
+    }
+    if (refs.vehicleEnvironmentalTag) {
+      refs.vehicleEnvironmentalTag.value = editingVehicle.environmentalTag || "Sin etiqueta";
+    }
     refs.vehiclePrice.value = String(editingVehicle.pricePerMonth);
+    refs.vehiclePrice1.value = getAdminPricePlanValue(editingVehicle, "1");
+    refs.vehiclePrice3.value = getAdminPricePlanValue(editingVehicle, "3");
+    refs.vehiclePrice6.value = getAdminPricePlanValue(editingVehicle, "6");
+    refs.vehiclePrice9.value = getAdminPricePlanValue(editingVehicle, "9");
+    refs.vehiclePrice12.value = getAdminPricePlanValue(editingVehicle, "12");
+    refs.vehiclePrice18.value = getAdminPricePlanValue(editingVehicle, "18");
     refs.vehicleLocation.value = editingVehicle.location;
     refs.vehiclePassengers.value = String(editingVehicle.passengers);
     refs.vehicleTransmission.value = editingVehicle.transmission;
     refs.vehicleFuel.value = editingVehicle.fuel;
+    refs.vehicleColor.value = editingVehicle.color || "";
+    fillMileageInputs(editingVehicle.mileagePlans);
+    fillCoverageInputs(editingVehicle.coverageOptions);
     refs.vehicleImageFile.value = "";
     setCurrentVehicleImages(getVehicleImages(editingVehicle));
+    if (refs.vehicleShowDescription) {
+      refs.vehicleShowDescription.checked = editingVehicle.showDescription !== false;
+    }
+    if (refs.vehicleShowCoverage) {
+      refs.vehicleShowCoverage.checked = editingVehicle.showCoverage !== false;
+    }
     refs.vehicleSummary.value = editingVehicle.summary;
     refs.vehicleFeatures.value = editingVehicle.features.join(", ");
   } else {
@@ -1280,6 +1410,10 @@ function renderAdminVehicleItem(vehicle) {
   const availability = getVehicleAvailability(vehicle, null);
   const currentStatus = availability.isAvailable ? "Libre hoy" : "Ocupado hoy";
   const imageCount = getVehicleImages(vehicle).length;
+  const lowestPrice = getVehicleLowestMonthlyPrice(vehicle);
+  const mileageSummary = vehicle.mileagePlans?.length
+    ? `${vehicle.mileagePlans[0].km} km base`
+    : "Km por definir";
 
   return `
     <article class="admin-vehicle-item">
@@ -1288,9 +1422,10 @@ function renderAdminVehicleItem(vehicle) {
           <h4>${escapeHtml(vehicle.name)}</h4>
           <div class="admin-vehicle-meta">
             <span>${escapeHtml(getTypeLabel(vehicle.type))}</span>
-            <span>${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
+            <span>${escapeHtml(`Desde ${formatPrice(lowestPrice)}`)}</span>
             <span>${escapeHtml(vehicle.location)}</span>
             <span>${escapeHtml(currentStatus)}</span>
+            <span>${escapeHtml(mileageSummary)}</span>
             <span>${escapeHtml(`${imageCount} ${imageCount === 1 ? "foto" : "fotos"}`)}</span>
           </div>
         </div>
@@ -1819,23 +1954,40 @@ function normalizeVehicle(vehicle) {
 
   const images = normalizeVehicleImages(vehicle.images, vehicle.image);
   const legacyDailyPrice = Number(vehicle.pricePerDay);
-  const normalizedMonthlyPrice = Number(vehicle.pricePerMonth) > 0
+  const fallbackMonthlyPrice = Number(vehicle.pricePerMonth) > 0
     ? Number(vehicle.pricePerMonth)
     : legacyDailyPrice > 0
       ? legacyDailyPrice * 30
       : 1350;
+  const pricePlans = normalizePricePlans(vehicle.pricePlans, fallbackMonthlyPrice);
+  const mileagePlans = normalizeMileagePlans(vehicle.mileagePlans);
+  const coverageOptions = normalizeCoverageOptions(vehicle.coverageOptions);
+  const normalizedMonthlyPrice = getPreferredMonthlyPrice(pricePlans, fallbackMonthlyPrice);
 
   return {
     id: String(vehicle.id || createId("veh")),
     name: String(vehicle.name || "Vehiculo sin nombre"),
+    versionLabel: String(
+      vehicle.versionLabel
+        || vehicle.version
+        || `${vehicle.name || "Version"} ${Number(vehicle.passengers) > 0 ? `${Number(vehicle.passengers)} plazas` : ""}`
+    ).trim(),
     type: ["coche", "suv", "furgoneta"].includes(vehicle.type) ? vehicle.type : "coche",
+    brand: String(vehicle.brand || getVehicleBrandFallback(vehicle.name)).trim() || "Sin marca",
+    environmentalTag: String(vehicle.environmentalTag || "Sin etiqueta").trim() || "Sin etiqueta",
     pricePerMonth: normalizedMonthlyPrice,
+    pricePlans,
     location: String(vehicle.location || "Sin ciudad"),
     passengers: Number(vehicle.passengers) > 0 ? Number(vehicle.passengers) : 5,
     transmission: String(vehicle.transmission || "Manual"),
     fuel: String(vehicle.fuel || "Gasolina"),
+    color: String(vehicle.color || "No especificado"),
+    mileagePlans,
+    coverageOptions,
     image: images[0] || "",
     images,
+    showDescription: vehicle.showDescription !== false,
+    showCoverage: vehicle.showCoverage !== false,
     summary: String(vehicle.summary || "Consulta por WhatsApp para confirmar condiciones."),
     features: Array.isArray(vehicle.features)
       ? vehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
@@ -1866,6 +2018,135 @@ function normalizeVehicleImages(images, legacyImage = "") {
   return normalizedImages;
 }
 
+function normalizePricePlans(rawPricePlans, fallbackPrice) {
+  const source = rawPricePlans && typeof rawPricePlans === "object" ? rawPricePlans : {};
+  const normalizedPlans = PRICE_PLAN_KEYS.reduce((accumulator, key) => {
+    const rawValue = Number(source[key]);
+
+    if (rawValue > 0) {
+      accumulator[key] = Math.round(rawValue);
+    }
+
+    return accumulator;
+  }, {});
+
+  const derivedPlans = createDerivedPricePlans(getBaseMonthlyPriceFromPlans(normalizedPlans, fallbackPrice));
+
+  PRICE_PLAN_KEYS.forEach((key) => {
+    if (!normalizedPlans[key] && derivedPlans[key]) {
+      normalizedPlans[key] = derivedPlans[key];
+    }
+  });
+
+  return normalizedPlans;
+}
+
+function getBaseMonthlyPriceFromPlans(pricePlans, fallbackPrice) {
+  if (Number(fallbackPrice) > 0) {
+    return Number(fallbackPrice);
+  }
+
+  const candidates = PRICE_PLAN_KEYS
+    .filter((key) => Number(pricePlans[key]) > 0)
+    .map((key) => Number(pricePlans[key]) / Number(PRICE_PLAN_MULTIPLIERS[key] || 1))
+    .filter((value) => value > 0);
+
+  return candidates.length ? Math.min(...candidates) : 1350;
+}
+
+function createDerivedPricePlans(fallbackPrice) {
+  const basePrice = Number(fallbackPrice) > 0 ? Number(fallbackPrice) : 1350;
+
+  return PRICE_PLAN_KEYS.reduce((accumulator, key) => {
+    accumulator[key] = roundVehiclePrice(basePrice * Number(PRICE_PLAN_MULTIPLIERS[key] || 1));
+    return accumulator;
+  }, {});
+}
+
+function roundVehiclePrice(value) {
+  return Math.max(1, Math.round(Number(value || 0) / 5) * 5);
+}
+
+function normalizeMileagePlans(rawMileagePlans) {
+  const source = Array.isArray(rawMileagePlans)
+    ? rawMileagePlans
+    : rawMileagePlans && typeof rawMileagePlans === "object"
+      ? Object.values(rawMileagePlans)
+      : [];
+  const normalizedPlans = source
+    .map((plan, index) => {
+      const fallback = DEFAULT_MILEAGE_PLANS[index] || DEFAULT_MILEAGE_PLANS[DEFAULT_MILEAGE_PLANS.length - 1];
+      const km = Number(plan?.km);
+      const surcharge = Number(plan?.surcharge);
+
+      return {
+        km: km > 0 ? Math.round(km) : fallback.km,
+        surcharge: surcharge >= 0 ? Math.round(surcharge) : fallback.surcharge
+      };
+    })
+    .filter((plan) => plan.km > 0)
+    .sort((left, right) => left.km - right.km);
+
+  return normalizedPlans.length
+    ? normalizedPlans
+    : DEFAULT_MILEAGE_PLANS.map((plan) => ({ ...plan }));
+}
+
+function normalizeCoverageOptions(rawCoverageOptions) {
+  const source = Array.isArray(rawCoverageOptions)
+    ? rawCoverageOptions
+    : rawCoverageOptions && typeof rawCoverageOptions === "object"
+      ? Object.values(rawCoverageOptions)
+      : [];
+  const normalizedOptions = DEFAULT_COVERAGE_OPTIONS.map((fallback, index) => {
+    const option = source[index] && typeof source[index] === "object" ? source[index] : {};
+
+    return {
+      id: String(option.id || fallback.id),
+      name: String(option.name || fallback.name).trim() || fallback.name,
+      surcharge: Number(option.surcharge) >= 0 ? Math.round(Number(option.surcharge)) : fallback.surcharge,
+      description: String(option.description || fallback.description).trim() || fallback.description,
+      deposit: String(option.deposit || fallback.deposit).trim() || fallback.deposit,
+      recommended: Boolean(option.recommended)
+    };
+  });
+  let recommendedIndex = normalizedOptions.findIndex((option) => option.recommended);
+
+  if (recommendedIndex === -1) {
+    recommendedIndex = DEFAULT_COVERAGE_OPTIONS.findIndex((option) => option.recommended);
+  }
+
+  normalizedOptions.forEach((option, index) => {
+    option.recommended = index === recommendedIndex;
+  });
+
+  return normalizedOptions;
+}
+
+function getPreferredMonthlyPrice(pricePlans, fallbackPrice) {
+  if (Number(pricePlans["18"]) > 0) {
+    return Number(pricePlans["18"]);
+  }
+
+  const availablePrices = Object.values(pricePlans).filter((value) => Number(value) > 0);
+
+  if (availablePrices.length) {
+    return Math.min(...availablePrices);
+  }
+
+  return Number(fallbackPrice) > 0 ? Number(fallbackPrice) : 1350;
+}
+
+function getVehicleLowestMonthlyPrice(vehicle) {
+  const availablePrices = Object.values(vehicle?.pricePlans || {}).filter((value) => Number(value) > 0);
+
+  if (availablePrices.length) {
+    return Math.min(...availablePrices);
+  }
+
+  return Number(vehicle?.pricePerMonth) > 0 ? Number(vehicle.pricePerMonth) : 0;
+}
+
 function normalizeBlock(block) {
   if (!block || typeof block !== "object") {
     return null;
@@ -1892,12 +2173,23 @@ function createDemoVehicles() {
     {
       id: createId("veh"),
       name: "Seat Ibiza Urban",
+      versionLabel: "Seat Ibiza 1.0 MPI Reference 5 plazas",
       type: "coche",
+      brand: "Seat",
+      environmentalTag: "C",
       pricePerMonth: 1380,
+      pricePlans: { "1": 1820, "3": 1685, "6": 1545, "9": 1475, "12": 1420, "18": 1380 },
       location: "Madrid centro",
       passengers: 5,
       transmission: "Manual",
       fuel: "Gasolina",
+      color: "Azul",
+      mileagePlans: [{ km: 800, surcharge: 0 }, { km: 1500, surcharge: 35 }, { km: 2000, surcharge: 55 }],
+      coverageOptions: normalizeCoverageOptions([
+        { name: "Bronce", surcharge: 0, description: "Franquicia 1200 EUR", deposit: "Fianza 2 meses" },
+        { name: "Plata", surcharge: 49, description: "Franquicia 300 EUR", deposit: "Fianza 1 mes", recommended: true },
+        { name: "Oro", surcharge: 189, description: "Sin franquicia", deposit: "Fianza 1 mes" }
+      ]),
       image: "",
       summary: "Compacto agil para ciudad y uso mensual con consumo contenido.",
       features: ["Bluetooth", "Aire", "Consumo bajo"],
@@ -1909,12 +2201,19 @@ function createDemoVehicles() {
     {
       id: createId("veh"),
       name: "Peugeot 3008 Allure",
+      versionLabel: "Peugeot 3008 Hybrid Allure EAT8 5 plazas",
       type: "suv",
+      brand: "Peugeot",
+      environmentalTag: "ECO",
       pricePerMonth: 2160,
+      pricePlans: { "1": 2850, "3": 2640, "6": 2420, "9": 2310, "12": 2230, "18": 2160 },
       location: "Getafe",
       passengers: 5,
       transmission: "Automatica",
       fuel: "Hibrido",
+      color: "Rojo",
+      mileagePlans: [{ km: 800, surcharge: 0 }, { km: 1500, surcharge: 49 }, { km: 2000, surcharge: 79 }],
+      coverageOptions: createDefaultCoverageOptions(),
       image: "",
       summary: "SUV comodo para alquiler mensual, carretera y uso familiar con buen maletero.",
       features: ["Camara", "CarPlay", "Etiqueta ECO"],
@@ -1925,12 +2224,19 @@ function createDemoVehicles() {
     {
       id: createId("veh"),
       name: "Citroen Berlingo Cargo",
+      versionLabel: "Citroen Berlingo BlueHDi Van 3 plazas",
       type: "furgoneta",
+      brand: "Citroen",
+      environmentalTag: "C",
       pricePerMonth: 2370,
+      pricePlans: { "1": 3125, "3": 2890, "6": 2645, "9": 2535, "12": 2440, "18": 2370 },
       location: "Alcorcon",
       passengers: 3,
       transmission: "Manual",
       fuel: "Diesel",
+      color: "Blanco",
+      mileagePlans: [{ km: 800, surcharge: 0 }, { km: 1500, surcharge: 39 }, { km: 2000, surcharge: 59 }],
+      coverageOptions: createDefaultCoverageOptions(),
       image: "",
       summary: "Ideal para reparto y trabajo por meses con acceso comodo y carga amplia.",
       features: ["Carga amplia", "Puerta lateral", "Anclajes"],
@@ -1942,12 +2248,19 @@ function createDemoVehicles() {
     {
       id: createId("veh"),
       name: "Renault Trafic Passenger",
+      versionLabel: "Renault Trafic Combi 9 plazas",
       type: "furgoneta",
+      brand: "Renault",
+      environmentalTag: "C",
       pricePerMonth: 2850,
+      pricePlans: { "1": 3760, "3": 3475, "6": 3180, "9": 3050, "12": 2940, "18": 2850 },
       location: "Leganes",
       passengers: 9,
       transmission: "Manual",
       fuel: "Diesel",
+      color: "Gris",
+      mileagePlans: [{ km: 800, surcharge: 0 }, { km: 1500, surcharge: 45 }, { km: 2000, surcharge: 69 }],
+      coverageOptions: createDefaultCoverageOptions(),
       image: "",
       summary: "Furgoneta de pasajeros para traslados y uso continuo con mucho espacio.",
       features: ["9 plazas", "Maletero", "USB"],
@@ -2084,7 +2397,36 @@ function openAdminPanel() {
 function closeAdminPanel() {
   refs.adminPanelModal.classList.add("hidden");
   refs.adminPanelModal.setAttribute("aria-hidden", "true");
+  closeVehicleModal();
+  closeSettingsModal();
   updateOverlayState();
+}
+
+function openVehicleModal() {
+  if (!refs.vehicleModal) {
+    return;
+  }
+
+  refs.vehicleModal.classList.remove("hidden");
+  refs.vehicleModal.setAttribute("aria-hidden", "false");
+}
+
+function closeVehicleModal() {
+  if (!refs.vehicleModal) {
+    return;
+  }
+
+  refs.vehicleModal.classList.add("hidden");
+  refs.vehicleModal.setAttribute("aria-hidden", "true");
+}
+
+function closeSettingsModal() {
+  if (!refs.settingsModal) {
+    return;
+  }
+
+  refs.settingsModal.classList.add("hidden");
+  refs.settingsModal.setAttribute("aria-hidden", "true");
 }
 
 function updateOverlayState() {
@@ -2112,18 +2454,30 @@ async function readVehicleForm() {
   }
 
   const images = await optimizeVehicleImagesForStorage(getCurrentVehicleImages());
+  const pricePlans = readVehiclePricePlansFromForm();
+  const mileagePlans = readVehicleMileagePlansFromForm();
+  const coverageOptions = readVehicleCoverageOptionsFromForm();
 
   return {
     id: refs.vehicleId.value || "",
     name: refs.vehicleName.value.trim(),
+    versionLabel: refs.vehicleVersionLabel?.value.trim() || "",
     type: refs.vehicleType.value,
-    pricePerMonth: Number(refs.vehiclePrice.value),
+    brand: refs.vehicleBrand?.value.trim() || getVehicleBrandFallback(refs.vehicleName.value),
+    environmentalTag: refs.vehicleEnvironmentalTag?.value || "Sin etiqueta",
+    pricePerMonth: getPreferredMonthlyPrice(pricePlans, Number(refs.vehiclePrice18?.value) || Number(refs.vehiclePrice.value)),
+    pricePlans,
     location: refs.vehicleLocation.value.trim(),
     passengers: Number(refs.vehiclePassengers.value),
     transmission: refs.vehicleTransmission.value.trim(),
     fuel: refs.vehicleFuel.value.trim(),
+    color: refs.vehicleColor.value.trim(),
+    mileagePlans,
+    coverageOptions,
     image: images[0] || "",
     images,
+    showDescription: refs.vehicleShowDescription ? refs.vehicleShowDescription.checked : true,
+    showCoverage: refs.vehicleShowCoverage ? refs.vehicleShowCoverage.checked : true,
     summary: refs.vehicleSummary.value.trim(),
     features: refs.vehicleFeatures.value.split(",").map((item) => item.trim()).filter(Boolean)
   };
@@ -2133,8 +2487,130 @@ function resetVehicleForm() {
   refs.vehicleForm.reset();
   refs.vehicleId.value = "";
   refs.vehicleType.value = "coche";
+  if (refs.vehicleBrand) {
+    refs.vehicleBrand.value = "";
+  }
+  if (refs.vehicleEnvironmentalTag) {
+    refs.vehicleEnvironmentalTag.value = "Sin etiqueta";
+  }
   refs.vehicleImageFile.value = "";
+  if (refs.vehicleVersionLabel) {
+    refs.vehicleVersionLabel.value = "";
+  }
+  if (refs.vehicleColor) {
+    refs.vehicleColor.value = "";
+  }
+  if (refs.vehicleShowDescription) {
+    refs.vehicleShowDescription.checked = true;
+  }
+  if (refs.vehicleShowCoverage) {
+    refs.vehicleShowCoverage.checked = true;
+  }
+  fillMileageInputs(DEFAULT_MILEAGE_PLANS);
+  fillCoverageInputs(createDefaultCoverageOptions());
   setCurrentVehicleImages([]);
+}
+
+function readVehiclePricePlansFromForm() {
+  const pricePlans = PRICE_PLAN_KEYS.reduce((accumulator, key) => {
+    const input = refs.vehiclePricePlanInputs.find((item) => item.dataset.planKey === key);
+    accumulator[key] = Number(input?.value);
+    return accumulator;
+  }, {});
+  const normalizedPlans = normalizePricePlans(pricePlans, Number(refs.vehiclePrice18?.value) || Number(refs.vehiclePrice.value));
+
+  if (refs.vehiclePrice) {
+    refs.vehiclePrice.value = String(getPreferredMonthlyPrice(normalizedPlans, 0));
+  }
+
+  return normalizedPlans;
+}
+
+function readVehicleMileagePlansFromForm() {
+  return normalizeMileagePlans([
+    { km: Number(refs.vehicleKm1?.value), surcharge: Number(refs.vehicleKm1Price?.value) },
+    { km: Number(refs.vehicleKm2?.value), surcharge: Number(refs.vehicleKm2Price?.value) },
+    { km: Number(refs.vehicleKm3?.value), surcharge: Number(refs.vehicleKm3Price?.value) }
+  ]);
+}
+
+function fillMileageInputs(mileagePlans) {
+  const plans = normalizeMileagePlans(mileagePlans);
+  const refsByIndex = [
+    [refs.vehicleKm1, refs.vehicleKm1Price],
+    [refs.vehicleKm2, refs.vehicleKm2Price],
+    [refs.vehicleKm3, refs.vehicleKm3Price]
+  ];
+
+  refsByIndex.forEach(([kmRef, surchargeRef], index) => {
+    const plan = plans[index] || DEFAULT_MILEAGE_PLANS[index] || DEFAULT_MILEAGE_PLANS[DEFAULT_MILEAGE_PLANS.length - 1];
+
+    if (kmRef) {
+      kmRef.value = String(plan.km);
+    }
+
+    if (surchargeRef) {
+      surchargeRef.value = String(plan.surcharge);
+    }
+  });
+}
+
+function readVehicleCoverageOptionsFromForm() {
+  return normalizeCoverageOptions(
+    refs.vehicleCoverageRows.map((row, index) => ({
+      id: row.getAttribute("data-coverage-id") || DEFAULT_COVERAGE_OPTIONS[index]?.id || `coverage-${index + 1}`,
+      name: row.querySelector("[data-coverage-name]")?.value,
+      surcharge: Number(row.querySelector("[data-coverage-price]")?.value),
+      description: row.querySelector("[data-coverage-description]")?.value,
+      deposit: row.querySelector("[data-coverage-deposit]")?.value,
+      recommended: Boolean(row.querySelector("[data-coverage-recommended]")?.checked)
+    }))
+  );
+}
+
+function fillCoverageInputs(coverageOptions) {
+  const options = normalizeCoverageOptions(coverageOptions);
+
+  refs.vehicleCoverageRows.forEach((row, index) => {
+    const option = options[index] || DEFAULT_COVERAGE_OPTIONS[index];
+
+    row.setAttribute("data-coverage-id", option.id);
+
+    const nameInput = row.querySelector("[data-coverage-name]");
+    const priceInput = row.querySelector("[data-coverage-price]");
+    const descriptionInput = row.querySelector("[data-coverage-description]");
+    const depositInput = row.querySelector("[data-coverage-deposit]");
+    const recommendedInput = row.querySelector("[data-coverage-recommended]");
+
+    if (nameInput) {
+      nameInput.value = option.name;
+    }
+
+    if (priceInput) {
+      priceInput.value = String(option.surcharge);
+    }
+
+    if (descriptionInput) {
+      descriptionInput.value = option.description;
+    }
+
+    if (depositInput) {
+      depositInput.value = option.deposit;
+    }
+
+    if (recommendedInput) {
+      recommendedInput.checked = option.recommended;
+    }
+  });
+}
+
+function getAdminPricePlanValue(vehicle, key) {
+  const value = Number(vehicle?.pricePlans?.[key]);
+  return value > 0 ? String(value) : "";
+}
+
+function createDefaultCoverageOptions() {
+  return DEFAULT_COVERAGE_OPTIONS.map((option) => ({ ...option }));
 }
 
 function queueVehicleImageSelection() {
@@ -2558,6 +3034,10 @@ function normalizeDateRange(start, end) {
 
 function normalizeWhatsappNumber(value) {
   return String(value || "").replace(/\D/g, "");
+}
+
+function getVehicleBrandFallback(name) {
+  return String(name || "").trim().split(/\s+/)[0] || "";
 }
 
 function sortBlocks(blocks) {

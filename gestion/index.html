@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alquilo Aqui | Gestion interna</title>
+  <meta
+    name="description"
+    content="Acceso interno de gestion de Alquilo Aqui para editar vehiculos, bloquear periodos y actualizar el boton de WhatsApp."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="../styles.css?v=20260427-model1">
+  <style>
+    body.page-gestion .menu-toggle,
+    body.page-gestion .menu-drawer,
+    body.page-gestion main,
+    body.page-gestion .site-footer,
+    body.page-gestion .floating-whatsapp {
+      display: none !important;
+    }
+
+    body.page-gestion .page-shell {
+      width: min(1160px, calc(100% - 32px));
+      padding-bottom: 56px;
+    }
+
+    body.page-gestion .site-header {
+      margin-bottom: 22px;
+      padding-bottom: 20px;
+    }
+
+    .gestion-entry {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 420px);
+      gap: 24px;
+      align-items: stretch;
+      margin-top: 20px;
+    }
+
+    .gestion-entry-copy,
+    .gestion-entry-card {
+      padding: 30px;
+      border: 1px solid rgba(0, 64, 128, 0.12);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 24px 60px rgba(0, 64, 128, 0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .gestion-entry-copy h1 {
+      margin: 0 0 14px;
+      color: #0d2a43;
+      font-size: clamp(2.2rem, 4vw, 3.6rem);
+      line-height: 0.96;
+    }
+
+    .gestion-entry-copy p,
+    .gestion-entry-card p,
+    .gestion-entry-card li {
+      color: #58728a;
+      line-height: 1.7;
+    }
+
+    .gestion-entry-card ul {
+      margin: 18px 0 0;
+      padding-left: 18px;
+    }
+
+    .gestion-entry-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .gestion-entry {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  <script src="../config.js" defer></script>
+  <script src="../app.js?v=20260427-model1" defer></script>
+</head>
+<body class="page-gestion">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="../" aria-label="Volver al inicio de Alquilo Aqui">
+        <img src="../assets/logo-alquilo-aqui-transparent.png" alt="Logo de Alquilo Aqui">
+      </a>
+      <button
+        class="menu-toggle"
+        id="menuToggle"
+        type="button"
+        aria-controls="siteMenu"
+        aria-expanded="false"
+        aria-label="Abrir menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+
+    <section class="gestion-entry">
+      <article class="gestion-entry-copy">
+        <p class="eyebrow">Acceso interno</p>
+        <h1>Gestion separada de la parte publica.</h1>
+        <p>
+          La home ya no enlaza este acceso. Desde aqui se mantiene el mismo
+          flujo protegido para editar vehiculos, bloquear periodos y actualizar
+          el WhatsApp comercial.
+        </p>
+        <div class="gestion-entry-actions">
+          <button class="button button-primary" type="button" data-open-admin>
+            Entrar a gestion
+          </button>
+          <a class="button button-secondary" href="../">Volver al sitio publico</a>
+        </div>
+      </article>
+
+      <aside class="gestion-entry-card">
+        <p class="card-label">Acceso conservado</p>
+        <h2>Usuario y clave actuales</h2>
+        <p>
+          El usuario administrador sigue siendo el mismo y la clave de acceso se
+          mantiene exactamente igual que antes.
+        </p>
+        <ul>
+          <li>Ruta directa: alquiloaqui.es/gestion</li>
+          <li>Usuario interno: contacto@alquiloaqui.es</li>
+          <li>La home publica ya no expone este acceso</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="menu-drawer hidden" id="siteMenu" aria-hidden="true">
+      <div class="menu-backdrop" data-close-menu></div>
+      <nav class="menu-panel" aria-label="Menu principal">
+        <div class="menu-panel-top">
+          <img src="../assets/logo-alquilo-aqui-transparent.png" alt="Alquilo Aqui">
+          <button class="menu-close" type="button" data-close-menu aria-label="Cerrar menu">
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+
+        <div class="menu-links">
+          <a class="menu-link" href="#inicio" data-menu-link>Inicio</a>
+          <a class="menu-link" href="#catalogo" data-menu-link>Catalogo</a>
+          <a class="menu-link" href="#proceso" data-menu-link>Como reservar</a>
+        </div>
+
+        <div class="menu-actions">
+          <a
+            class="button button-primary"
+            id="menuWhatsappLink"
+            href="https://wa.me/34604982625"
+            target="_blank"
+            rel="noreferrer"
+          >WhatsApp</a>
+          <button class="button button-secondary" type="button" data-open-admin>Gestion</button>
+        </div>
+      </nav>
+    </section>
+
+    <main id="inicio">
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Coches y furgonetas para 1, 3 o 12 meses.</h1>
+          <p class="hero-text">
+            Elige la fecha de inicio, selecciona el plazo y consulta por
+            WhatsApp el alquiler mensual que mejor te encaja.
+          </p>
+
+          <div class="cta-group">
+            <a
+              class="button button-primary"
+              id="heroWhatsappLink"
+              href="https://wa.me/34604982625"
+              target="_blank"
+              rel="noreferrer"
+            >Hablar por WhatsApp</a>
+            <a class="button button-secondary" href="#catalogo">Ver catalogo</a>
+          </div>
+
+          <ul class="hero-points" aria-label="Puntos clave">
+            <li>Plazos de 1 mes, 3 meses y 12 meses o mas</li>
+            <li>Precio mensual visible en cada ficha</li>
+            <li>Consulta directa por WhatsApp</li>
+          </ul>
+        </div>
+
+        <aside class="hero-panel" aria-label="Filtros del catalogo">
+          <h2>Elige inicio, duracion y tipo de vehiculo.</h2>
+
+          <form class="search-panel" id="searchForm">
+            <label>
+              <span>Inicio</span>
+              <input id="filterStart" type="date">
+            </label>
+            <label>
+              <span>Duracion</span>
+              <select id="filterTerm">
+                <option value="1">1 mes</option>
+                <option value="3">3 meses</option>
+                <option value="12plus">12 meses o mas</option>
+              </select>
+            </label>
+            <label>
+              <span>Tipo</span>
+              <select id="filterType">
+                <option value="all">Todos</option>
+                <option value="coche">Coches</option>
+                <option value="suv">SUV</option>
+                <option value="furgoneta">Furgonetas</option>
+              </select>
+            </label>
+            <button class="button button-primary" type="submit">Ver opciones</button>
+          </form>
+        </aside>
+      </section>
+
+      <section class="catalog-section" id="catalogo">
+        <div class="section-heading">
+          <p class="eyebrow">Vehiculos</p>
+          <h2>Catalogo</h2>
+          <p>
+            Busca por modelo, ciudad o rasgo y consulta el vehiculo que mejor
+            encaje para un alquiler de 1, 3 o 12 meses o mas.
+          </p>
+        </div>
+
+        <div class="catalog-toolbar">
+          <label>
+            <span>Buscar</span>
+            <input id="searchInput" type="search" placeholder="Modelo, ciudad o rasgo">
+          </label>
+          <button class="button button-secondary toolbar-button" id="resetFiltersBtn" type="button">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div class="fleet-grid" id="fleetGrid" aria-live="polite"></div>
+        <p class="empty-state hidden" id="emptyState">
+          No hay vehiculos que coincidan con los filtros actuales.
+        </p>
+        <div class="vehicle-detail hidden" id="vehicleDetail" aria-live="polite"></div>
+      </section>
+
+      <section class="process-section" id="proceso">
+        <div class="section-heading">
+          <p class="eyebrow">Como reservar</p>
+          <h2>Un proceso mensual claro y directo.</h2>
+        </div>
+
+        <div class="process-grid">
+          <article class="process-card">
+            <span class="process-number">01</span>
+            <h3>Elige inicio y plazo</h3>
+            <p>Selecciona la fecha de inicio y el plazo mensual que necesitas.</p>
+          </article>
+          <article class="process-card">
+            <span class="process-number">02</span>
+            <h3>Revisa la ficha</h3>
+            <p>Mira el precio por mes y la informacion de cada coche o furgoneta.</p>
+          </article>
+          <article class="process-card">
+            <span class="process-number">03</span>
+            <h3>Habla por WhatsApp</h3>
+            <p>Abre el chat con el plazo elegido listo para pedir presupuesto o reservar.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <p>Alquilo Aqui</p>
+        <small>Catalogo online para alquiler mensual con contacto directo por WhatsApp.</small>
+      </div>
+      <div class="footer-actions">
+        <a
+          class="footer-link"
+          id="footerWhatsappLink"
+          href="https://wa.me/34604982625"
+          target="_blank"
+          rel="noreferrer"
+        >WhatsApp</a>
+      </div>
+    </footer>
+  </div>
+
+  <a
+    class="floating-whatsapp"
+    id="floatingWhatsappLink"
+    href="https://wa.me/34604982625"
+    target="_blank"
+    rel="noreferrer"
+  >Reservar por WhatsApp</a>
+
+  <section class="modal hidden" id="adminLoginModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-login></div>
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close-login aria-label="Cerrar acceso">
+        Cerrar
+      </button>
+      <p class="card-label">Acceso protegido</p>
+      <h2>Gestion del catalogo</h2>
+      <p>
+        Usa el acceso interno para editar vehiculos, bloquear periodos y
+        ajustar el boton de WhatsApp.
+      </p>
+      <p class="helper-text sync-status" id="loginSyncStatus"></p>
+
+      <form class="stack-form" id="adminLoginForm">
+        <label>
+          <span>Usuario administrador</span>
+          <input type="email" value="contacto@alquiloaqui.es" readonly>
+        </label>
+        <label>
+          <span>Clave de gestion</span>
+          <input id="adminPasswordInput" type="password" required placeholder="Introduce la clave">
+        </label>
+        <button class="button button-primary" type="submit">Entrar al panel</button>
+      </form>
+
+      <p class="helper-text" id="adminLoginMessage">
+        Solo el administrador necesita acceso. Los clientes no crean cuenta.
+      </p>
+    </div>
+  </section>
+
+  <section class="modal hidden" id="adminPanelModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-panel></div>
+    <div class="admin-panel">
+      <header class="admin-header">
+        <div>
+          <p class="card-label">Panel de gestion</p>
+          <h2>Panel de Gestion</h2>
+          <p class="helper-text sync-status" id="syncStatus"></p>
+        </div>
+        <div class="admin-header-actions">
+          <button class="button button-secondary small-button" data-open-modal="settingsModal" type="button">
+            Configuracion rapida
+          </button>
+          <button class="button button-secondary small-button" id="newVehicleBtn" data-open-modal="vehicleModal" type="button">
+            Nuevo vehiculo
+          </button>
+          <button class="button button-secondary small-button" id="adminLogoutBtn" type="button">
+            Cerrar sesion
+          </button>
+          <button class="modal-close" type="button" data-close-panel aria-label="Cerrar panel">
+            Cerrar
+          </button>
+        </div>
+      </header>
+
+      <div class="admin-grid">
+
+
+        <section class="admin-section admin-section-wide">
+          <div class="admin-section-head">
+            <h3>Vehiculos cargados</h3>
+            <p>Revisa el inventario activo y entra a editar o eliminar cada ficha.</p>
+          </div>
+
+          <div class="admin-list" id="adminVehicleList"></div>
+        </section>
+
+        <section class="admin-section admin-section-wide">
+          <div class="admin-section-head">
+            <h3>Calendario y bloqueos</h3>
+            <p>Marca periodos ocupados y manten el estado publico actualizado.</p>
+          </div>
+
+          <div class="calendar-controls">
+            <label>
+              <span>Vehiculo</span>
+              <select id="blockVehicleSelect"></select>
+            </label>
+
+            <form class="range-form" id="blockForm">
+              <label>
+                <span>Desde</span>
+                <input id="blockStart" type="date" required>
+              </label>
+              <label>
+                <span>Hasta</span>
+                <input id="blockEnd" type="date" required>
+              </label>
+              <label>
+                <span>Nota</span>
+                <input id="blockNote" type="text" placeholder="Reserva, taller, limpieza">
+              </label>
+              <button class="button button-primary" type="submit">Bloquear fechas</button>
+            </form>
+          </div>
+
+          <div class="calendar-widget">
+            <div class="calendar-header">
+              <button class="calendar-nav" id="calendarPrevBtn" type="button">Mes anterior</button>
+              <strong id="calendarLabel"></strong>
+              <button class="calendar-nav" id="calendarNextBtn" type="button">Mes siguiente</button>
+            </div>
+
+            <div class="calendar-weekdays">
+              <span>Lun</span>
+              <span>Mar</span>
+              <span>Mie</span>
+              <span>Jue</span>
+              <span>Vie</span>
+              <span>Sab</span>
+              <span>Dom</span>
+            </div>
+
+            <div class="calendar-days" id="calendarDays"></div>
+          </div>
+
+          <div class="block-list" id="blockList"></div>
+          <p class="helper-text" id="blockFormMessage"></p>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- Settings Modal -->
+  <section class="modal hidden" id="settingsModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-panel">
+      <button class="modal-close" type="button" data-close-modal aria-label="Cerrar configuracion">
+        Cerrar
+      </button>
+      <p class="card-label">Configuracion rapida</p>
+      <h2>Cambia el numero de WhatsApp y actualiza la clave de gestion.</h2>
+      
+      <form class="stack-form" id="settingsForm">
+        <label>
+          <span>Numero de WhatsApp</span>
+          <input id="settingsWhatsapp" type="tel" placeholder="34604982625">
+        </label>
+        <label>
+          <span>Nueva clave de gestion</span>
+          <input id="settingsPassword" type="password" placeholder="Deja vacio para mantenerla">
+        </label>
+        <button class="button button-primary" type="submit">Guardar configuracion</button>
+      </form>
+
+      <p class="helper-text" id="settingsMessage"></p>
+    </div>
+  </section>
+
+  <!-- Vehicle Modal -->
+  <section class="modal hidden" id="vehicleModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-panel modal-panel-large">
+      <button class="modal-close" type="button" data-close-modal aria-label="Cerrar ficha de vehiculo">
+        Cerrar
+      </button>
+      <p class="card-label">Ficha de vehiculo</p>
+      <h2>Da de alta, edita o retira coches y furgonetas sin tocar el HTML.</h2>
+      
+      <form class="stack-form" id="vehicleForm">
+        <input id="vehicleId" type="hidden">
+        <input id="vehiclePrice" type="hidden">
+
+        <section class="form-section-block">
+          <div class="form-section-head">
+            <h4>Identidad del vehiculo</h4>
+            <p>Estos datos alimentan el titulo, la version disponible y los detalles visibles en la ficha.</p>
+          </div>
+
+          <div class="split-fields split-fields-3">
+            <label>
+              <span>Nombre comercial</span>
+              <input id="vehicleName" type="text" required placeholder="Ej. Citroen Berlingo XL">
+            </label>
+            <label>
+              <span>Version comercial</span>
+              <input id="vehicleVersionLabel" type="text" placeholder="Ej. Berlingo BlueHDi Van 3 plazas">
+            </label>
+            <label>
+              <span>Categoria</span>
+              <select id="vehicleType">
+                <option value="coche">Coche</option>
+                <option value="suv">SUV</option>
+                <option value="furgoneta">Furgoneta</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="split-fields">
+            <label>
+              <span>Ciudad</span>
+              <input id="vehicleLocation" type="text" required placeholder="Madrid centro">
+            </label>
+            <label>
+              <span>Marca</span>
+              <input id="vehicleBrand" type="text" placeholder="Peugeot">
+            </label>
+          </div>
+
+          <div class="split-fields">
+            <label>
+              <span>Plazas</span>
+              <input id="vehiclePassengers" type="number" min="1" step="1" required placeholder="5">
+            </label>
+            <label>
+              <span>Etiqueta ambiental</span>
+              <select id="vehicleEnvironmentalTag">
+                <option value="Sin etiqueta">Sin etiqueta</option>
+                <option value="Cero">Cero</option>
+                <option value="ECO">ECO</option>
+                <option value="C">C</option>
+                <option value="B">B</option>
+                <option value="A">A</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="split-fields split-fields-3">
+            <label>
+              <span>Transmision</span>
+              <input id="vehicleTransmission" type="text" required placeholder="Manual o automatica">
+            </label>
+            <label>
+              <span>Combustible</span>
+              <input id="vehicleFuel" type="text" required placeholder="Gasolina, diesel, hibrido">
+            </label>
+            <label>
+              <span>Color</span>
+              <input id="vehicleColor" type="text" placeholder="Blanco mineral">
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section-block">
+          <div class="form-section-head">
+            <h4>Precios por periodo</h4>
+            <p>Define la cuota mensual para cada plazo. La ficha calcula automaticamente la cuota final con kilometros y cobertura.</p>
+          </div>
+
+          <div class="price-plan-grid">
+            <label>
+              <span>1 mes</span>
+              <input id="vehiclePrice1" data-price-plan-input data-plan-key="1" type="number" min="1" step="1" placeholder="1820">
+            </label>
+            <label>
+              <span>3 meses</span>
+              <input id="vehiclePrice3" data-price-plan-input data-plan-key="3" type="number" min="1" step="1" placeholder="1685">
+            </label>
+            <label>
+              <span>6 meses</span>
+              <input id="vehiclePrice6" data-price-plan-input data-plan-key="6" type="number" min="1" step="1" placeholder="1545">
+            </label>
+            <label>
+              <span>9 meses</span>
+              <input id="vehiclePrice9" data-price-plan-input data-plan-key="9" type="number" min="1" step="1" placeholder="1475">
+            </label>
+            <label>
+              <span>12 meses</span>
+              <input id="vehiclePrice12" data-price-plan-input data-plan-key="12" type="number" min="1" step="1" placeholder="1420">
+            </label>
+            <label>
+              <span>18 meses</span>
+              <input id="vehiclePrice18" data-price-plan-input data-plan-key="18" type="number" min="1" step="1" placeholder="1380">
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section-block">
+          <div class="form-section-head">
+            <h4>Kilometros por mes</h4>
+            <p>La primera opcion se entiende como incluida. Las siguientes suman un suplemento mensual al precio del plazo.</p>
+          </div>
+
+          <div class="mileage-grid">
+            <article class="mileage-admin-card">
+              <strong>Opcion 1</strong>
+              <div class="split-fields">
+                <label>
+                  <span>Km/mes</span>
+                  <input id="vehicleKm1" type="number" min="1" step="1" placeholder="800">
+                </label>
+                <label>
+                  <span>Suplemento</span>
+                  <input id="vehicleKm1Price" type="number" min="0" step="1" placeholder="0">
+                </label>
+              </div>
+            </article>
+            <article class="mileage-admin-card">
+              <strong>Opcion 2</strong>
+              <div class="split-fields">
+                <label>
+                  <span>Km/mes</span>
+                  <input id="vehicleKm2" type="number" min="1" step="1" placeholder="1500">
+                </label>
+                <label>
+                  <span>Suplemento</span>
+                  <input id="vehicleKm2Price" type="number" min="0" step="1" placeholder="39">
+                </label>
+              </div>
+            </article>
+            <article class="mileage-admin-card">
+              <strong>Opcion 3</strong>
+              <div class="split-fields">
+                <label>
+                  <span>Km/mes</span>
+                  <input id="vehicleKm3" type="number" min="1" step="1" placeholder="2000">
+                </label>
+                <label>
+                  <span>Suplemento</span>
+                  <input id="vehicleKm3Price" type="number" min="0" step="1" placeholder="59">
+                </label>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <label>
+          <span>Fotos del vehiculo</span>
+          <input id="vehicleImageFile" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
+        </label>
+        <div class="image-upload-list" id="vehicleImagesList"></div>
+        <div class="image-upload-tools">
+          <button class="button button-secondary small-button" id="clearVehicleImageBtn" type="button">
+            Quitar fotos
+          </button>
+        </div>
+        <div class="image-cropper hidden" id="vehicleImageCropper" aria-hidden="true">
+          <div class="image-cropper-head">
+            <div>
+              <strong>Ajustar recorte</strong>
+              <p>Encuadra la foto como se vera en el catalogo.</p>
+            </div>
+            <button class="mini-button" id="cancelImageCropBtn" type="button">Cerrar</button>
+          </div>
+          <div class="image-crop-stage" id="vehicleImageCropStage">
+            <img id="vehicleImageCropImg" alt="Foto para recortar">
+          </div>
+          <div class="crop-controls">
+            <label>
+              <span>Zoom</span>
+              <input id="vehicleImageCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+            </label>
+            <label>
+              <span>Horizontal</span>
+              <input id="vehicleImageCropX" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              <span>Vertical</span>
+              <input id="vehicleImageCropY" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+          </div>
+          <button class="button button-primary small-button" id="applyImageCropBtn" type="button">
+            Aplicar recorte
+          </button>
+        </div>
+        <p class="helper-text">
+          Sube uno o varios archivos JPG o PNG. La primera foto sera la principal y puedes ajustar el recorte antes de guardar.
+        </p>
+
+        <section class="form-section-block">
+          <div class="form-section-head">
+            <h4>Cobertura a todo riesgo</h4>
+            <p>Estas tres tarjetas se muestran tal cual en la ficha y modifican la cuota mensual al seleccionarlas.</p>
+          </div>
+
+          <label class="section-visibility-toggle">
+            <input id="vehicleShowCoverage" type="checkbox" checked>
+            <span>Mostrar esta seccion en la ficha publica</span>
+          </label>
+
+          <div class="coverage-admin-grid">
+            <article class="coverage-admin-card" data-coverage-index="0" data-coverage-id="bronze">
+              <div class="coverage-admin-head">
+                <strong>Tarjeta 1</strong>
+                <label class="coverage-recommended-flag">
+                  <input data-coverage-recommended type="checkbox">
+                  <span>Recomendada</span>
+                </label>
+              </div>
+              <div class="split-fields">
+                <label>
+                  <span>Nombre</span>
+                  <input data-coverage-name type="text" placeholder="Bronze">
+                </label>
+                <label>
+                  <span>Suplemento/mes</span>
+                  <input data-coverage-price type="number" min="0" step="1" placeholder="0">
+                </label>
+              </div>
+              <label>
+                <span>Linea principal</span>
+                <input data-coverage-description type="text" placeholder="Franquicia 1200 EUR">
+              </label>
+              <label>
+                <span>Linea secundaria</span>
+                <input data-coverage-deposit type="text" placeholder="Fianza 2 meses">
+              </label>
+            </article>
+
+            <article class="coverage-admin-card" data-coverage-index="1" data-coverage-id="silver">
+              <div class="coverage-admin-head">
+                <strong>Tarjeta 2</strong>
+                <label class="coverage-recommended-flag">
+                  <input data-coverage-recommended type="checkbox">
+                  <span>Recomendada</span>
+                </label>
+              </div>
+              <div class="split-fields">
+                <label>
+                  <span>Nombre</span>
+                  <input data-coverage-name type="text" placeholder="Plata">
+                </label>
+                <label>
+                  <span>Suplemento/mes</span>
+                  <input data-coverage-price type="number" min="0" step="1" placeholder="49">
+                </label>
+              </div>
+              <label>
+                <span>Linea principal</span>
+                <input data-coverage-description type="text" placeholder="Franquicia 300 EUR">
+              </label>
+              <label>
+                <span>Linea secundaria</span>
+                <input data-coverage-deposit type="text" placeholder="Fianza 1 mes">
+              </label>
+            </article>
+
+            <article class="coverage-admin-card" data-coverage-index="2" data-coverage-id="gold">
+              <div class="coverage-admin-head">
+                <strong>Tarjeta 3</strong>
+                <label class="coverage-recommended-flag">
+                  <input data-coverage-recommended type="checkbox">
+                  <span>Recomendada</span>
+                </label>
+              </div>
+              <div class="split-fields">
+                <label>
+                  <span>Nombre</span>
+                  <input data-coverage-name type="text" placeholder="Oro">
+                </label>
+                <label>
+                  <span>Suplemento/mes</span>
+                  <input data-coverage-price type="number" min="0" step="1" placeholder="219">
+                </label>
+              </div>
+              <label>
+                <span>Linea principal</span>
+                <input data-coverage-description type="text" placeholder="Sin franquicia">
+              </label>
+              <label>
+                <span>Linea secundaria</span>
+                <input data-coverage-deposit type="text" placeholder="Fianza 1 mes">
+              </label>
+            </article>
+          </div>
+        </section>
+
+        <section class="form-section-block">
+          <div class="form-section-head">
+            <h4>Contenido de la ficha</h4>
+            <p>La descripcion solo aparece dentro de la pagina del coche. Usa los rasgos destacados para el bloque inferior.</p>
+          </div>
+
+          <label class="section-visibility-toggle">
+            <input id="vehicleShowDescription" type="checkbox" checked>
+            <span>Mostrar esta seccion en la ficha publica</span>
+          </label>
+
+          <label>
+            <span>Descripcion corta</span>
+            <textarea id="vehicleSummary" rows="3" placeholder="Ideal para escapadas, ciudad o reparto ligero."></textarea>
+          </label>
+          <label>
+            <span>Rasgos destacados</span>
+            <input id="vehicleFeatures" type="text" placeholder="Bluetooth, Aire, Maletero amplio">
+          </label>
+        </section>
+
+        <div class="inline-actions">
+          <button class="button button-primary" type="submit">Guardar vehiculo</button>
+          <button class="button button-secondary" id="cancelVehicleEditBtn" type="button">
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <p class="helper-text" id="vehicleFormMessage"></p>
+    </div>
+  </section>
+
+  <style>
+    .admin-header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .admin-section-head h3,
+    .admin-section-head p {
+      margin: 0;
+    }
+    .admin-section-head {
+      margin-bottom: 16px;
+    }
+    .modal-panel-large {
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 32px;
+    }
+    
+    .form-section-block {
+      margin-bottom: 32px;
+      padding: 24px;
+      border: 1px solid rgba(0, 64, 128, 0.08);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+    
+    .form-section-head {
+      margin-bottom: 20px;
+    }
+    
+    .form-section-head h4 {
+      margin: 0 0 8px;
+      color: #0d2a43;
+      font-size: 1.2rem;
+    }
+    
+    .form-section-head p {
+      margin: 0;
+      color: #58728a;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .mileage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+    
+    .mileage-admin-card {
+      padding: 20px;
+      border: 1px solid rgba(0, 64, 128, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+    
+    .mileage-admin-card strong {
+      display: block;
+      margin-bottom: 16px;
+      color: #0d2a43;
+      font-size: 1.1rem;
+    }
+    
+    .coverage-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 16px;
+    }
+    
+    .coverage-admin-card {
+      padding: 24px;
+      border: 1px solid rgba(0, 64, 128, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+    
+    .coverage-admin-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .coverage-admin-head strong {
+      color: #0d2a43;
+      font-size: 1.1rem;
+    }
+    
+    .coverage-recommended-flag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: #58728a;
+    }
+    
+    .coverage-recommended-flag input[type="checkbox"] {
+      margin: 0;
+    }
+    
+    .split-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .split-fields.split-fields-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .split-fields label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .split-fields label span {
+      font-weight: 500;
+      color: #0d2a43;
+      font-size: 0.9rem;
+    }
+    
+    .price-plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .price-plan-grid label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .price-plan-grid label span {
+      font-weight: 500;
+      color: #0d2a43;
+      font-size: 0.9rem;
+    }
+
+    .section-visibility-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: #0d2a43;
+      font-weight: 500;
+    }
+
+    .section-visibility-toggle input[type="checkbox"] {
+      margin: 0;
+    }
+    
+    .stack-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .stack-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .stack-form label span {
+      font-weight: 500;
+      color: #0d2a43;
+      font-size: 0.9rem;
+    }
+    
+    input, select, textarea {
+      padding: 12px;
+      border: 1px solid rgba(0, 64, 128, 0.2);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(0, 64, 128, 0.4);
+      box-shadow: 0 0 0 3px rgba(0, 64, 128, 0.1);
+    }
+    
+    .inline-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    
+    .helper-text {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(0, 64, 128, 0.05);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #58728a;
+      border-left: 3px solid rgba(0, 64, 128, 0.2);
+    }
+  </style>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const trigger = document.querySelector(".gestion-entry [data-open-admin]");
+      if (trigger) {
+        window.setTimeout(() => trigger.click(), 160);
+      }
+
+      // Modal functionality
+      const modalTriggers = document.querySelectorAll('[data-open-modal]');
+      const modalCloseButtons = document.querySelectorAll('[data-close-modal]');
+      
+      modalTriggers.forEach(trigger => {
+        trigger.addEventListener('click', () => {
+          const modalId = trigger.getAttribute('data-open-modal');
+          const modal = document.getElementById(modalId);
+          if (modal) {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+          }
+        });
+      });
+      
+      modalCloseButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const modal = button.closest('.modal');
+          if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+          }
+        });
+      });
+      
+      // Close modal on backdrop click
+      document.addEventListener('click', (e) => {
+        if (e.target.matches('[data-close-modal]')) {
+          const modal = e.target.closest('.modal');
+          if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

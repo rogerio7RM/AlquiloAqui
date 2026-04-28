@@ -70,6 +70,7 @@ const state = {
     blockVehicleId: null,
     calendarMonth: startOfMonth(new Date()),
     currentVehicleImages: [],
+    currentVehicleImagesDirty: false,
     croppingImageIndex: null,
     vehicleImageSelectionPromise: null,
     activeVehicleId: null,
@@ -87,6 +88,8 @@ const state = {
     isRemoteEmpty: false,
     hasPendingLocalSave: false,
     lastRemoteJson: "",
+    lastRemoteState: null,
+    pendingRemoteSaveOptions: { allowMissingImageVehicleIds: [] },
     pendingSave: Promise.resolve(),
     status: "local",
     errorMessage: ""
@@ -459,7 +462,12 @@ function bindAdminEvents() {
     }
 
     try {
-      saveState();
+      saveState({
+        allowMissingImageVehicleIds:
+          vehicle.id && state.ui.currentVehicleImagesDirty && !vehicle.images.length
+            ? [vehicle.id]
+            : []
+      });
     } catch (error) {
       state.data = normalizeState(JSON.parse(previousState));
       renderPublic();
@@ -1329,6 +1337,7 @@ function renderAdmin() {
     fillCoverageInputs(editingVehicle.coverageOptions);
     refs.vehicleImageFile.value = "";
     setCurrentVehicleImages(getVehicleImages(editingVehicle));
+    state.ui.currentVehicleImagesDirty = false;
     if (refs.vehicleShowDescription) {
       refs.vehicleShowDescription.checked = editingVehicle.showDescription !== false;
     }
@@ -1560,14 +1569,16 @@ function loadState() {
   }
 }
 
-function saveState() {
+function saveState(options = {}) {
+  state.sync.pendingRemoteSaveOptions = normalizeRemoteSaveOptions(options);
+
   try {
     persistLocalState(state.data);
   } catch (error) {
     // Local cache must never block Firebase persistence or the admin workflow.
   }
 
-  void saveRemoteState().catch(() => {});
+  void saveRemoteState(options).catch(() => {});
 }
 
 function persistLocalState(data) {
@@ -1646,20 +1657,31 @@ function handleRemoteSnapshot(snapshot) {
   state.sync.isRemoteEmpty = !snapshot.exists();
 
   if (state.sync.hasPendingLocalSave && state.sync.auth?.currentUser) {
+    const remoteState = snapshot.exists() ? normalizeState(snapshot.val()) : null;
+    state.sync.lastRemoteState = remoteState;
     state.sync.lastRemoteJson = snapshot.exists()
-      ? JSON.stringify(createRemoteState(normalizeState(snapshot.val())))
+      ? JSON.stringify(createRemoteState(remoteState))
       : "";
-    void saveRemoteState({ force: true }).catch(() => {});
+    if (remoteState) {
+      state.data = mergeStateForRemoteWrite(state.data, remoteState, state.sync.pendingRemoteSaveOptions);
+      persistLocalState(state.data);
+    }
+    void saveRemoteState({
+      force: true,
+      ...state.sync.pendingRemoteSaveOptions
+    }).catch(() => {});
     return;
   }
 
   if (!snapshot.exists()) {
+    state.sync.lastRemoteState = null;
     state.sync.status = "empty";
     renderSyncStatus();
     return;
   }
 
   const remoteState = normalizeState(snapshot.val());
+  state.sync.lastRemoteState = remoteState;
   state.sync.lastRemoteJson = JSON.stringify(createRemoteState(remoteState));
   state.sync.status = "ready";
   state.sync.errorMessage = "";
@@ -1673,18 +1695,23 @@ function handleRemoteError(error) {
 }
 
 async function saveRemoteState(options = {}) {
+  const normalizedOptions = normalizeRemoteSaveOptions(options);
+
   if (!state.sync.isConfigured) {
     return;
   }
 
   if (!state.sync.databaseRef || !state.sync.isReady) {
     state.sync.hasPendingLocalSave = true;
+    state.sync.pendingRemoteSaveOptions = normalizedOptions;
     state.sync.status = "pending";
     renderSyncStatus();
     return;
   }
 
-  const remoteState = createRemoteState(state.data);
+  const mergedState = mergeStateForRemoteWrite(state.data, state.sync.lastRemoteState, normalizedOptions);
+  state.data = mergedState;
+  const remoteState = createRemoteState(mergedState);
   const remoteJson = JSON.stringify(remoteState);
 
   if (!options.force && remoteJson === state.sync.lastRemoteJson) {
@@ -1702,9 +1729,11 @@ async function saveRemoteState(options = {}) {
     .catch(() => {})
     .then(async () => {
       await state.sync.databaseRef.set(remoteState);
+      state.sync.lastRemoteState = normalizeState(remoteState);
       state.sync.lastRemoteJson = remoteJson;
       state.sync.isRemoteEmpty = false;
       state.sync.hasPendingLocalSave = false;
+      state.sync.pendingRemoteSaveOptions = { allowMissingImageVehicleIds: [] };
       state.sync.status = "ready";
       state.sync.errorMessage = "";
     });
@@ -1753,6 +1782,67 @@ function createRemoteState(data) {
     },
     vehicles: normalizedState.vehicles
   };
+}
+
+function normalizeRemoteSaveOptions(options = {}) {
+  const allowMissingImageVehicleIds = Array.isArray(options.allowMissingImageVehicleIds)
+    ? options.allowMissingImageVehicleIds.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+
+  return {
+    allowMissingImageVehicleIds: [...new Set(allowMissingImageVehicleIds)]
+  };
+}
+
+function mergeStateForRemoteWrite(localState, remoteState, options = {}) {
+  const normalizedLocalState = normalizeState(localState);
+  const normalizedRemoteState = remoteState ? normalizeState(remoteState) : null;
+
+  if (!normalizedRemoteState) {
+    return normalizedLocalState;
+  }
+
+  const allowMissingImageVehicleIds = new Set(
+    normalizeRemoteSaveOptions(options).allowMissingImageVehicleIds
+  );
+  const remoteVehicleMap = new Map(
+    normalizedRemoteState.vehicles.map((vehicle) => [vehicle.id, vehicle])
+  );
+
+  return {
+    settings: {
+      ...normalizedRemoteState.settings,
+      ...normalizedLocalState.settings
+    },
+    vehicles: normalizedLocalState.vehicles.map((vehicle) =>
+      mergeVehicleForRemoteWrite(
+        vehicle,
+        remoteVehicleMap.get(vehicle.id),
+        allowMissingImageVehicleIds
+      )
+    )
+  };
+}
+
+function mergeVehicleForRemoteWrite(localVehicle, remoteVehicle, allowMissingImageVehicleIds) {
+  if (!remoteVehicle) {
+    return localVehicle;
+  }
+
+  const localImages = getVehicleImages(localVehicle);
+  const remoteImages = getVehicleImages(remoteVehicle);
+  const shouldPreserveRemoteImages =
+    !allowMissingImageVehicleIds.has(localVehicle.id) &&
+    !localImages.length &&
+    remoteImages.length > 0;
+  const images = shouldPreserveRemoteImages ? remoteImages : localImages;
+
+  return normalizeVehicle({
+    ...remoteVehicle,
+    ...localVehicle,
+    image: images[0] || "",
+    images
+  });
 }
 
 function getFirebaseConfig() {
@@ -2509,6 +2599,7 @@ function resetVehicleForm() {
   fillMileageInputs(DEFAULT_MILEAGE_PLANS);
   fillCoverageInputs(createDefaultCoverageOptions());
   setCurrentVehicleImages([]);
+  state.ui.currentVehicleImagesDirty = false;
 }
 
 function readVehiclePricePlansFromForm() {
@@ -2647,6 +2738,7 @@ async function handleVehicleImageSelection() {
     }
 
     addCurrentVehicleImages(images);
+    state.ui.currentVehicleImagesDirty = true;
     refs.vehicleImageFile.value = "";
     setMessage(
       refs.vehicleFormMessage,
@@ -2663,6 +2755,7 @@ async function handleVehicleImageSelection() {
 function clearVehicleImage() {
   refs.vehicleImageFile.value = "";
   setCurrentVehicleImages([]);
+  state.ui.currentVehicleImagesDirty = true;
   closeVehicleImageCropper();
 }
 
@@ -2748,6 +2841,7 @@ function moveVehicleImageToPrimary(index) {
   const [selectedImage] = images.splice(index, 1);
   images.unshift(selectedImage);
   setCurrentVehicleImages(images);
+  state.ui.currentVehicleImagesDirty = true;
   setMessage(refs.vehicleFormMessage, "Foto principal actualizada.", "success");
 }
 
@@ -2760,6 +2854,7 @@ function removeCurrentVehicleImage(index) {
 
   images.splice(index, 1);
   setCurrentVehicleImages(images);
+  state.ui.currentVehicleImagesDirty = true;
   setMessage(refs.vehicleFormMessage, "Foto eliminada.", "success");
 }
 
@@ -2847,6 +2942,7 @@ function applyVehicleImageCrop() {
 
   images[index] = canvas.toDataURL("image/jpeg", VEHICLE_IMAGE_JPEG_QUALITY);
   setCurrentVehicleImages(images);
+  state.ui.currentVehicleImagesDirty = true;
   closeVehicleImageCropper();
   setMessage(refs.vehicleFormMessage, "Recorte aplicado. Guarda el vehiculo para publicarlo.", "success");
 }

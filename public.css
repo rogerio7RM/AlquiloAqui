@@ -687,6 +687,11 @@ img {
   background: #d8f7df;
 }
 
+.home-available-card-badge.is-unavailable {
+  color: #b14a2d;
+  background: #f5ddd4;
+}
+
 .home-available-card-price {
   position: absolute;
   top: 12px;

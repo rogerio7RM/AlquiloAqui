@@ -86,7 +86,7 @@
     }
   </style>
   <script src="../config.js" defer></script>
-  <script src="../app.js?v=20260427-model1" defer></script>
+  <script src="../app.js?v=20260428-availability-flag" defer></script>
 </head>
 <body class="page-gestion">
   <div class="page-shell">
@@ -768,6 +768,11 @@
             <h4>Contenido de la ficha</h4>
             <p>La descripcion solo aparece dentro de la pagina del coche. Usa los rasgos destacados para el bloque inferior.</p>
           </div>
+
+          <label class="section-visibility-toggle">
+            <input id="vehicleShowAsAvailable" type="checkbox" checked>
+            <span>Mostrar este vehiculo como disponible</span>
+          </label>
 
           <label class="section-visibility-toggle">
             <input id="vehicleShowDescription" type="checkbox" checked>

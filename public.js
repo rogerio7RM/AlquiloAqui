@@ -291,6 +291,7 @@ function normalizeVehicle(vehicle) {
     coverageOptions,
     image: images[0] || "",
     images,
+    showAsAvailable: vehicle.showAsAvailable !== false,
     showDescription: vehicle.showDescription !== false,
     showCoverage: vehicle.showCoverage !== false,
     summary: String(vehicle.summary || "Consulta disponibilidad y condiciones por WhatsApp."),
@@ -1050,7 +1051,7 @@ function bindModelExperience(vehicle, filters, phoneNumber) {
     totalPrice.textContent = getPriceAmountText(selection.monthlyQuote);
     selectedTermLabel.textContent = getPricePlanLabel(activeTermKey);
     quoteBreakdown.textContent = getModelQuoteBreakdown(selection);
-    availabilityBadge.textContent = availability.isAvailable ? "Disponible" : "Con bloqueo";
+    availabilityBadge.textContent = getAvailabilityBadgeText(availability);
     availabilityBadge.className = `vehicle-quote-availability-badge ${availability.isAvailable ? "is-available" : "is-busy"}`;
     availabilityCopy.textContent = getModelAvailabilityCopy(availability, filters.start, activeTermKey, vehicle.showCoverage);
     availabilityFooter.textContent = availability.isAvailable ? "Entrega inmediata" : "Consultar fecha";
@@ -1284,9 +1285,23 @@ function getPricePlanLabel(termKey) {
   return `${months} ${months === 1 ? "mes" : "meses"}`;
 }
 
+function getAvailabilityBadgeText(availability) {
+  if (availability.isAvailable) {
+    return "Disponible";
+  }
+
+  return availability.manuallyUnavailable ? "No disponible" : "Con bloqueo";
+}
+
 function getModelAvailabilityCopy(availability, startValue, termKey, hasCoverage = true) {
   if (startValue && availability.isAvailable) {
     return `Disponible para ${getPricePlanLabel(termKey)} desde ${formatDate(startValue)}.`;
+  }
+
+  if (availability.manuallyUnavailable) {
+    return startValue
+      ? "Este vehiculo esta marcado manualmente como no disponible para el periodo solicitado."
+      : "Este vehiculo esta marcado manualmente como no disponible ahora.";
   }
 
   if (startValue && !availability.isAvailable) {
@@ -1351,7 +1366,7 @@ function renderVehicleCard(vehicle, filters = getFiltersFromUrl()) {
 
         <div class="availability-panel">
           <span class="availability-badge ${availability.isAvailable ? "available" : "busy"}">
-            ${availability.isAvailable ? "Disponible" : "Con bloqueo"}
+            ${escapeHtml(getAvailabilityBadgeText(availability))}
           </span>
           <p class="availability-copy">${escapeHtml(getAvailabilityCopy(availability, filters))}</p>
         </div>
@@ -1410,13 +1425,15 @@ function renderHomeShowcaseSlide(vehicle, originalIndex, slotIndex, total) {
 }
 
 function renderHomeAvailableCard(vehicle) {
+  const availability = getVehicleAvailability(vehicle, null);
   const image = getVehicleDisplayImage(vehicle);
   const vehicleUrl = buildVehicleUrl(vehicle);
+  const badgeClass = availability.isAvailable ? "" : " is-unavailable";
 
   return `
     <article class="home-available-card">
       <a class="home-available-card-media" href="${escapeAttribute(vehicleUrl)}" aria-label="${escapeAttribute(`Ver ${vehicle.name}`)}">
-        <span class="home-available-card-badge">Disponible</span>
+        <span class="home-available-card-badge${badgeClass}">${escapeHtml(getAvailabilityBadgeText(availability))}</span>
         <span class="home-available-card-price">
           <span>Desde</span>
           <strong>${escapeHtml(getPriceAmountText(vehicle.pricePerMonth))}</strong>
@@ -1788,18 +1805,23 @@ function buildVehicleWhatsappUrl(vehicle, availability, filters, phoneNumber, se
   parts.push(
     availability.isAvailable
       ? "La ficha aparece disponible y quiero confirmar condiciones."
-      : "La ficha aparece con bloqueo y quiero revisar alternativas."
+      : availability.manuallyUnavailable
+        ? "La ficha aparece no disponible y quiero revisar alternativas."
+        : "La ficha aparece con bloqueo y quiero revisar alternativas."
   );
 
   return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(parts.join(" "))}`;
 }
 
 function getVehicleAvailability(vehicle, range) {
+  const manuallyUnavailable = vehicle.showAsAvailable === false;
+
   if (!range) {
     const nextBlock = [...vehicle.blocks].sort(sortBlocks)[0] || null;
 
     return {
-      isAvailable: true,
+      isAvailable: !manuallyUnavailable,
+      manuallyUnavailable,
       conflicts: [],
       nextBlock
     };
@@ -1811,7 +1833,8 @@ function getVehicleAvailability(vehicle, range) {
   const nextBlock = vehicle.blocks.find((block) => block.start > range.end) || null;
 
   return {
-    isAvailable: conflicts.length === 0,
+    isAvailable: !manuallyUnavailable && conflicts.length === 0,
+    manuallyUnavailable,
     conflicts: conflicts.sort(sortBlocks),
     nextBlock
   };
@@ -1848,6 +1871,12 @@ function rangesOverlap(startA, endA, startB, endB) {
 function getAvailabilityCopy(availability, filters) {
   if (filters.start && availability.isAvailable) {
     return `Disponible para ${getMonthlyTermLabel(filters.term)} desde ${formatDate(filters.start)}.`;
+  }
+
+  if (availability.manuallyUnavailable) {
+    return filters.start
+      ? "Este vehiculo esta marcado manualmente como no disponible para el periodo solicitado."
+      : "Este vehiculo esta marcado manualmente como no disponible ahora.";
   }
 
   if (filters.start && !availability.isAvailable) {

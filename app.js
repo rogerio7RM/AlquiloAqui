@@ -184,6 +184,7 @@ function cacheDom() {
   refs.vehicleImageCropY = document.getElementById("vehicleImageCropY");
   refs.applyImageCropBtn = document.getElementById("applyImageCropBtn");
   refs.cancelImageCropBtn = document.getElementById("cancelImageCropBtn");
+  refs.vehicleShowAsAvailable = document.getElementById("vehicleShowAsAvailable");
   refs.vehicleShowDescription = document.getElementById("vehicleShowDescription");
   refs.vehicleShowCoverage = document.getElementById("vehicleShowCoverage");
   refs.vehicleSummary = document.getElementById("vehicleSummary");
@@ -447,6 +448,7 @@ function bindAdminEvents() {
       existingVehicle.coverageOptions = vehicle.coverageOptions;
       existingVehicle.image = vehicle.image;
       existingVehicle.images = vehicle.images;
+      existingVehicle.showAsAvailable = vehicle.showAsAvailable;
       existingVehicle.showDescription = vehicle.showDescription;
       existingVehicle.showCoverage = vehicle.showCoverage;
       existingVehicle.summary = vehicle.summary;
@@ -1338,6 +1340,9 @@ function renderAdmin() {
     refs.vehicleImageFile.value = "";
     setCurrentVehicleImages(getVehicleImages(editingVehicle));
     state.ui.currentVehicleImagesDirty = false;
+    if (refs.vehicleShowAsAvailable) {
+      refs.vehicleShowAsAvailable.checked = editingVehicle.showAsAvailable !== false;
+    }
     if (refs.vehicleShowDescription) {
       refs.vehicleShowDescription.checked = editingVehicle.showDescription !== false;
     }
@@ -1417,7 +1422,11 @@ function setSyncStatusMessage(elements, message, type) {
 
 function renderAdminVehicleItem(vehicle) {
   const availability = getVehicleAvailability(vehicle, null);
-  const currentStatus = availability.isAvailable ? "Libre hoy" : "Ocupado hoy";
+  const currentStatus = availability.manuallyUnavailable
+    ? "No disponible"
+    : availability.isAvailable
+      ? "Libre hoy"
+      : "Ocupado hoy";
   const imageCount = getVehicleImages(vehicle).length;
   const lowestPrice = getVehicleLowestMonthlyPrice(vehicle);
   const mileageSummary = vehicle.mileagePlans?.length
@@ -2076,6 +2085,7 @@ function normalizeVehicle(vehicle) {
     coverageOptions,
     image: images[0] || "",
     images,
+    showAsAvailable: vehicle.showAsAvailable !== false,
     showDescription: vehicle.showDescription !== false,
     showCoverage: vehicle.showCoverage !== false,
     summary: String(vehicle.summary || "Consulta por WhatsApp para confirmar condiciones."),
@@ -2378,6 +2388,7 @@ function getPublicFilters() {
 }
 
 function getVehicleAvailability(vehicle, range) {
+  const manuallyUnavailable = vehicle.showAsAvailable === false;
   const effectiveRange = range || {
     start: toIsoDate(new Date()),
     end: toIsoDate(new Date())
@@ -2388,7 +2399,8 @@ function getVehicleAvailability(vehicle, range) {
   const nextBlock = sortBlocks(vehicle.blocks).find((block) => block.start > effectiveRange.end);
 
   return {
-    isAvailable: conflicts.length === 0,
+    isAvailable: !manuallyUnavailable && conflicts.length === 0,
+    manuallyUnavailable,
     conflicts: sortBlocks(conflicts),
     nextBlock
   };
@@ -2407,6 +2419,12 @@ function getAvailableHint(availability, filters) {
 }
 
 function getUnavailableHint(availability, filters) {
+  if (availability.manuallyUnavailable) {
+    return filters.range
+      ? "Vehiculo marcado manualmente como no disponible para este plazo."
+      : "Vehiculo marcado manualmente como no disponible.";
+  }
+
   const activeBlock = availability.conflicts[0];
 
   if (!activeBlock) {
@@ -2430,7 +2448,9 @@ function buildVehicleWhatsappUrl(vehicle, availability, filters) {
       : `Plazo deseado: ${termLabel}. Inicio flexible.`,
     availability.isAvailable
       ? "La ficha aparece libre para ese plazo."
-      : "La ficha aparece ocupada para ese plazo y quiero una alternativa o una fecha libre.",
+      : availability.manuallyUnavailable
+        ? "La ficha aparece no disponible y quiero una alternativa o una fecha libre."
+        : "La ficha aparece ocupada para ese plazo y quiero una alternativa o una fecha libre.",
     `Precio publicado: ${formatPrice(vehicle.pricePerMonth)}.`
   ];
 
@@ -2566,6 +2586,7 @@ async function readVehicleForm() {
     coverageOptions,
     image: images[0] || "",
     images,
+    showAsAvailable: refs.vehicleShowAsAvailable ? refs.vehicleShowAsAvailable.checked : true,
     showDescription: refs.vehicleShowDescription ? refs.vehicleShowDescription.checked : true,
     showCoverage: refs.vehicleShowCoverage ? refs.vehicleShowCoverage.checked : true,
     summary: refs.vehicleSummary.value.trim(),
@@ -2592,6 +2613,9 @@ function resetVehicleForm() {
   }
   if (refs.vehicleShowDescription) {
     refs.vehicleShowDescription.checked = true;
+  }
+  if (refs.vehicleShowAsAvailable) {
+    refs.vehicleShowAsAvailable.checked = true;
   }
   if (refs.vehicleShowCoverage) {
     refs.vehicleShowCoverage.checked = true;

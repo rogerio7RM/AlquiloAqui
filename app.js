@@ -489,6 +489,7 @@ function bindAdminEvents() {
     resetVehicleForm();
     renderPublic();
     renderAdmin();
+    closeVehicleModal();
   });
 
   refs.cancelVehicleEditBtn.addEventListener("click", () => {

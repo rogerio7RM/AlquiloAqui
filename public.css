@@ -1223,7 +1223,7 @@ img {
 
 .vehicle-media {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(8, 31, 49, 0.94), rgba(18, 59, 85, 0.82)),
@@ -1246,35 +1246,65 @@ img {
 
 .vehicle-type-badge {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 14px;
+  left: 14px;
   z-index: 1;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   color: var(--navy-900);
-  font-size: 0.78rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: rgba(255, 255, 255, 0.9);
 }
 
+.vehicle-price-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 96px;
+  padding: 10px 12px;
+  border-radius: 20px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #1d9fe4 0%, #0b7daf 100%);
+  box-shadow: 0 18px 30px rgba(11, 125, 175, 0.24);
+}
+
+.vehicle-price-badge small {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.86;
+}
+
+.vehicle-price-badge strong {
+  font-size: 1.18rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
 .vehicle-body {
   display: grid;
-  gap: 16px;
-  padding: 22px;
+  gap: 13px;
+  padding: 18px;
 }
 
 .vehicle-top {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
 }
 
 .vehicle-top h3 {
-  margin: 6px 0 0;
-  font-size: 1.28rem;
+  margin: 4px 0 0;
+  font-size: 1.02rem;
   line-height: 1.2;
 }
 
@@ -1285,27 +1315,18 @@ img {
 
 .vehicle-location {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.vehicle-price {
-  flex-shrink: 0;
-  color: var(--navy-900);
-  font-size: 1.45rem;
-  font-weight: 800;
-  text-align: right;
-}
-
-.vehicle-price span {
-  display: block;
-  margin-top: 2px;
+.vehicle-quote-meta {
+  margin: 8px 0 0;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
-  text-transform: uppercase;
+  line-height: 1.45;
 }
 
 .vehicle-summary {
@@ -1317,14 +1338,14 @@ img {
 .spec-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .spec-list li,
 .feature-pills li {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.66rem;
   font-weight: 700;
 }
 
@@ -1346,8 +1367,8 @@ img {
 
 .availability-panel {
   display: grid;
-  gap: 10px;
-  padding: 16px;
+  gap: 8px;
+  padding: 14px;
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, #f8fbfb 0%, #eef5f6 100%);
 }
@@ -1356,9 +1377,9 @@ img {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 7px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1382,14 +1403,20 @@ img {
 .availability-copy {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   line-height: 1.65;
 }
 
 .vehicle-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+}
+
+.vehicle-actions .button {
+  min-height: 42px;
+  padding: 0 18px;
+  font-size: 0.8rem;
 }
 
 .catalog-layout {

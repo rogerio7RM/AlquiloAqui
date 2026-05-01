@@ -462,14 +462,85 @@ function getPreferredMonthlyPrice(pricePlans, fallbackPrice) {
   return Number(fallbackPrice) > 0 ? Number(fallbackPrice) : 1350;
 }
 
-function getVehicleLowestMonthlyPrice(vehicle) {
-  const availablePrices = Object.values(vehicle?.pricePlans || {}).filter((value) => Number(value) > 0);
+function getVehicleLowestQuote(vehicle) {
+  const mileagePlans = Array.isArray(vehicle?.mileagePlans) && vehicle.mileagePlans.length
+    ? vehicle.mileagePlans
+    : DEFAULT_MILEAGE_PLANS;
+  const lowestMileagePlan = mileagePlans.reduce((bestPlan, plan) => {
+    if (!bestPlan) {
+      return plan;
+    }
 
-  if (availablePrices.length) {
-    return Math.min(...availablePrices);
+    const bestSurcharge = Number(bestPlan.surcharge || 0);
+    const currentSurcharge = Number(plan?.surcharge || 0);
+
+    if (currentSurcharge !== bestSurcharge) {
+      return currentSurcharge < bestSurcharge ? plan : bestPlan;
+    }
+
+    return Number(plan?.km || 0) < Number(bestPlan.km || 0) ? plan : bestPlan;
+  }, null) || DEFAULT_MILEAGE_PLANS[0];
+  const lowestPricePlan = PRICE_PLAN_KEYS.reduce((bestPlan, termKey) => {
+    const basePrice = Number(vehicle?.pricePlans?.[termKey]);
+
+    if (!(basePrice > 0)) {
+      return bestPlan;
+    }
+
+    const candidate = {
+      termKey,
+      basePrice,
+      price: basePrice + Number(lowestMileagePlan.surcharge || 0)
+    };
+
+    if (!bestPlan) {
+      return candidate;
+    }
+
+    if (candidate.price !== bestPlan.price) {
+      return candidate.price < bestPlan.price ? candidate : bestPlan;
+    }
+
+    return PRICE_PLAN_KEYS.indexOf(candidate.termKey) > PRICE_PLAN_KEYS.indexOf(bestPlan.termKey)
+      ? candidate
+      : bestPlan;
+  }, null);
+
+  if (lowestPricePlan) {
+    return {
+      price: lowestPricePlan.price,
+      termKey: lowestPricePlan.termKey,
+      basePrice: lowestPricePlan.basePrice,
+      mileagePlan: lowestMileagePlan
+    };
   }
 
-  return Number(vehicle?.pricePerMonth) > 0 ? Number(vehicle.pricePerMonth) : 0;
+  const fallbackPrice = Number(vehicle?.pricePerMonth) > 0 ? Number(vehicle.pricePerMonth) : 0;
+
+  return {
+    price: fallbackPrice + Number(lowestMileagePlan.surcharge || 0),
+    termKey: null,
+    basePrice: fallbackPrice,
+    mileagePlan: lowestMileagePlan
+  };
+}
+
+function getVehicleLowestQuoteMeta(quote) {
+  const parts = [];
+
+  if (Number(quote?.mileagePlan?.km) > 0) {
+    parts.push(`${Math.round(Number(quote.mileagePlan.km))} km`);
+  }
+
+  if (quote?.termKey) {
+    parts.push(getPricePlanLabel(quote.termKey));
+  }
+
+  return parts.join(" · ");
+}
+
+function getVehicleLowestMonthlyPrice(vehicle) {
+  return getVehicleLowestQuote(vehicle).price;
 }
 
 function normalizeWhatsappNumber(value) {
@@ -1328,13 +1399,18 @@ function renderVehicleCard(vehicle, filters = getFiltersFromUrl()) {
     pageWhatsappNumber()
   );
   const image = getVehicleDisplayImage(vehicle);
-  const lowestMonthlyPrice = getVehicleLowestMonthlyPrice(vehicle);
+  const lowestQuote = getVehicleLowestQuote(vehicle);
+  const lowestQuoteMeta = getVehicleLowestQuoteMeta(lowestQuote);
 
   return `
     <article class="vehicle-card">
       <a class="vehicle-media" href="${escapeAttribute(vehicleUrl)}" aria-label="${escapeAttribute(`Ver ${vehicle.name}`)}">
         <img src="${escapeAttribute(image)}" alt="${escapeAttribute(vehicle.name)}" loading="lazy">
         <span class="vehicle-type-badge">${escapeHtml(getTypeLabel(vehicle.type))}</span>
+        <span class="vehicle-price-badge">
+          <small>Desde</small>
+          <strong>${escapeHtml(getPriceAmountText(lowestQuote.price))}</strong>
+        </span>
       </a>
 
       <div class="vehicle-body">
@@ -1342,10 +1418,7 @@ function renderVehicleCard(vehicle, filters = getFiltersFromUrl()) {
           <div>
             <p class="vehicle-location">${escapeHtml(vehicle.location)}</p>
             <h3><a href="${escapeAttribute(vehicleUrl)}">${escapeHtml(vehicle.name)}</a></h3>
-          </div>
-          <div class="vehicle-price">
-            ${escapeHtml(formatPrice(lowestMonthlyPrice))}
-            <span>Desde</span>
+            ${lowestQuoteMeta ? `<p class="vehicle-quote-meta">${escapeHtml(lowestQuoteMeta)}</p>` : ""}
           </div>
         </div>
 
@@ -1354,15 +1427,6 @@ function renderVehicleCard(vehicle, filters = getFiltersFromUrl()) {
           <li>${escapeHtml(vehicle.transmission)}</li>
           <li>${escapeHtml(vehicle.fuel)}</li>
         </ul>
-
-        ${
-          vehicle.features.length
-            ? `<ul class="feature-pills">${vehicle.features
-                .slice(0, 3)
-                .map((feature) => `<li>${escapeHtml(feature)}</li>`)
-                .join("")}</ul>`
-            : ""
-        }
 
         <div class="availability-panel">
           <span class="availability-badge ${availability.isAvailable ? "available" : "busy"}">

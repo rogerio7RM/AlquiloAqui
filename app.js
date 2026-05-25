@@ -187,7 +187,6 @@ function cacheDom() {
   refs.vehicleShowAsAvailable = document.getElementById("vehicleShowAsAvailable");
   refs.vehicleShowDescription = document.getElementById("vehicleShowDescription");
   refs.vehicleShowCoverage = document.getElementById("vehicleShowCoverage");
-  refs.vehicleSummary = document.getElementById("vehicleSummary");
   refs.vehicleFeatures = document.getElementById("vehicleFeatures");
   refs.vehicleFormMessage = document.getElementById("vehicleFormMessage");
   refs.cancelVehicleEditBtn = document.getElementById("cancelVehicleEditBtn");
@@ -415,8 +414,7 @@ function bindAdminEvents() {
       !vehicle.name ||
       !vehicle.location ||
       !vehicle.transmission ||
-      !vehicle.fuel ||
-      (vehicle.showDescription && !vehicle.summary)
+      !vehicle.fuel
     ) {
       setMessage(refs.vehicleFormMessage, "Completa los campos obligatorios del vehiculo.", "error");
       return;
@@ -635,7 +633,6 @@ function renderPublic() {
     const haystack = [
       vehicle.name,
       vehicle.location,
-      vehicle.summary,
       vehicle.type,
       ...vehicle.features
     ].join(" ").toLowerCase();
@@ -1026,8 +1023,6 @@ function renderVehicleCard(vehicle, availability, filters) {
           <span class="vehicle-price">${escapeHtml(formatPrice(vehicle.pricePerMonth))}</span>
         </div>
 
-        <p class="vehicle-copy">${escapeHtml(vehicle.summary)}</p>
-
         <dl class="vehicle-meta">
           <div>
             <dt>Plazas</dt>
@@ -1115,7 +1110,6 @@ function renderVehicleDetail(vehicle, availability, filters) {
           <h3>${escapeHtml(vehicle.name)}</h3>
           <p class="vehicle-hint">${escapeHtml(vehicle.location)}</p>
           <p class="vehicle-detail-price">${escapeHtml(formatPrice(vehicle.pricePerMonth))}</p>
-          <p>${escapeHtml(vehicle.summary)}</p>
 
           <dl class="vehicle-meta">
             <div>
@@ -1350,7 +1344,6 @@ function renderAdmin() {
     if (refs.vehicleShowCoverage) {
       refs.vehicleShowCoverage.checked = editingVehicle.showCoverage !== false;
     }
-    refs.vehicleSummary.value = editingVehicle.summary;
     refs.vehicleFeatures.value = editingVehicle.features.join(", ");
   } else {
     resetVehicleForm();
@@ -1461,7 +1454,11 @@ function renderAdminVehicleItem(vehicle) {
           </button>
         </div>
       </div>
-      <p class="helper-text">${escapeHtml(vehicle.summary)}</p>
+      ${vehicle.features.length ? `
+        <ul class="feature-list">
+          ${vehicle.features.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}
+        </ul>
+      ` : ""}
     </article>
   `;
 }
@@ -2089,7 +2086,7 @@ function normalizeVehicle(vehicle) {
     showAsAvailable: vehicle.showAsAvailable !== false,
     showDescription: vehicle.showDescription !== false,
     showCoverage: vehicle.showCoverage !== false,
-    summary: String(vehicle.summary || "Consulta por WhatsApp para confirmar condiciones."),
+    summary: String(vehicle.summary || ""),
     features: Array.isArray(vehicle.features)
       ? vehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
       : ["Consulta directa"],
@@ -2590,7 +2587,7 @@ async function readVehicleForm() {
     showAsAvailable: refs.vehicleShowAsAvailable ? refs.vehicleShowAsAvailable.checked : true,
     showDescription: refs.vehicleShowDescription ? refs.vehicleShowDescription.checked : true,
     showCoverage: refs.vehicleShowCoverage ? refs.vehicleShowCoverage.checked : true,
-    summary: refs.vehicleSummary.value.trim(),
+    summary: "",
     features: refs.vehicleFeatures.value.split(",").map((item) => item.trim()).filter(Boolean)
   };
 }

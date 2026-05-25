@@ -283,7 +283,6 @@ h1 {
 .process-card p,
 .ops-copy p,
 .ops-card li,
-.vehicle-copy,
 .vehicle-status-copy,
 .vehicle-hint,
 .modal-panel p,
@@ -755,10 +754,6 @@ body.is-vehicle-detail-view .catalog-section {
   color: var(--surface-dark);
   font-size: 1.1rem;
   font-weight: 700;
-}
-
-.vehicle-copy {
-  margin: 0;
 }
 
 .vehicle-meta {

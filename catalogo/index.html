@@ -6,7 +6,7 @@
   <title>Catalogo | Alquilo Aqui</title>
   <meta
     name="description"
-    content="Explora el catalogo de coches y furgonetas de Alquilo Aqui. Filtra por cuota mensual, marca, transmision, combustible, categoria, plazas y etiqueta ambiental."
+    content="Explora el catalogo de coches y furgonetas de Alquilo Aqui. Filtra por marca, transmision, combustible, categoria, plazas y etiqueta ambiental."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,7 +95,7 @@
             </div>
             <div class="stat-card">
               <strong>Filtros</strong>
-              <span>por precio, marca, categoria y etiqueta</span>
+              <span>por marca, categoria y etiqueta</span>
             </div>
           </div>
         </div>
@@ -111,18 +111,6 @@
               <label class="field">
                 <span>Buscar</span>
                 <input id="catalogSearch" type="search" placeholder="Buscar vehiculo...">
-              </label>
-
-              <label class="field">
-                <span>Cuota Mensual</span>
-                <div class="price-range-card">
-                  <input id="catalogMinPrice" type="range">
-                  <input id="catalogMaxPrice" type="range">
-                  <div class="price-range-values">
-                    <span>Desde: <strong id="catalogMinPriceLabel">0€</strong></span>
-                    <span>Hasta: <strong id="catalogMaxPriceLabel">0€</strong></span>
-                  </div>
-                </div>
               </label>
 
               <label class="field">
@@ -146,7 +134,7 @@
               </label>
 
               <label class="field">
-                <span>Nº de Plazas</span>
+                <span>Numero de Plazas</span>
                 <select id="catalogPassengers"></select>
               </label>
 
@@ -165,7 +153,7 @@
             <div class="results-head">
               <div>
                 <strong id="catalogCount">0 vehiculos</strong>
-                <p id="catalogMeta">Ajusta el rango de cuota y combina filtros para afinar la busqueda.</p>
+                <p id="catalogMeta">Usa la busqueda y los filtros para afinar el listado.</p>
               </div>
             </div>
 
@@ -173,7 +161,7 @@
 
             <div class="empty-panel is-hidden" id="catalogEmpty">
               <h3>Sin resultados con esos filtros</h3>
-              <p>Prueba a ampliar el rango de cuota o limpiar alguno de los filtros.</p>
+              <p>Prueba a limpiar alguno de los filtros o ampliar la busqueda.</p>
             </div>
           </div>
         </div>

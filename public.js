@@ -16,6 +16,7 @@ const PRICE_PLAN_MULTIPLIERS = {
   "18": 1
 };
 const DEFAULT_MODEL_TERM_KEY = "6";
+const MOBILE_VIEWPORT_QUERY = "(max-width: 760px)";
 const DEFAULT_MILEAGE_PLANS = [
   { km: 800, surcharge: 0 },
   { km: 1500, surcharge: 39 },
@@ -76,9 +77,10 @@ const formatters = {
   })
 };
 
-let homeShowcaseTimer = 0;
+let homePageEventController = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+  initViewportMode();
   initNavigation();
   void initPublicPage();
 });
@@ -135,6 +137,38 @@ function initNavigation() {
       closeMenu();
     }
   });
+}
+
+function initViewportMode() {
+  const mediaQuery = window.matchMedia(MOBILE_VIEWPORT_QUERY);
+  const applyMode = (matches) => {
+    const mode = matches ? "mobile" : "desktop";
+    document.documentElement.dataset.device = mode;
+    document.body?.setAttribute("data-device", mode);
+  };
+  const handleChange = (event) => {
+    applyMode(event.matches);
+    window.dispatchEvent(
+      new CustomEvent("alquiloaqui:viewportchange", {
+        detail: { isMobile: event.matches }
+      })
+    );
+  };
+
+  applyMode(mediaQuery.matches);
+
+  if (typeof mediaQuery.addEventListener === "function") {
+    mediaQuery.addEventListener("change", handleChange);
+    return;
+  }
+
+  if (typeof mediaQuery.addListener === "function") {
+    mediaQuery.addListener(handleChange);
+  }
+}
+
+function isMobileViewport() {
+  return window.matchMedia(MOBILE_VIEWPORT_QUERY).matches;
 }
 
 async function loadPublicState() {
@@ -294,7 +328,7 @@ function normalizeVehicle(vehicle) {
     showAsAvailable: vehicle.showAsAvailable !== false,
     showDescription: vehicle.showDescription !== false,
     showCoverage: vehicle.showCoverage !== false,
-    summary: String(vehicle.summary || "Consulta disponibilidad y condiciones por WhatsApp."),
+    summary: String(vehicle.summary || ""),
     features: Array.isArray(vehicle.features)
       ? vehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
       : [],
@@ -581,6 +615,7 @@ function renderPage(state) {
 
 function renderHomePage(state) {
   const refs = {
+    showcaseSection: document.querySelector(".home-showcase"),
     showcaseTrack: document.getElementById("homeShowcaseTrack"),
     showcaseMeta: document.getElementById("homeShowcaseMeta"),
     showcasePrev: document.getElementById("homeShowcasePrev"),
@@ -590,7 +625,9 @@ function renderHomePage(state) {
     availableNext: document.getElementById("homeAvailableNext")
   };
 
-  clearHomeShowcaseTimer();
+  homePageEventController?.abort();
+  homePageEventController = new AbortController();
+  const { signal } = homePageEventController;
 
   if (!refs.showcaseTrack || !refs.availableTrack) {
     return;
@@ -613,53 +650,111 @@ function renderHomePage(state) {
   }
 
   let activeIndex = Math.min(2, showcaseVehicles.length - 1);
+  let showcaseTouchStartX = 0;
+  let showcaseTouchStartY = 0;
+  let showcaseSwipeIntent = false;
+  let showcaseSuppressClickUntil = 0;
 
-  const renderShowcase = () => {
-    const activeVehicle = showcaseVehicles[activeIndex];
-    const orderedSlides = getOrderedShowcaseVehicles(showcaseVehicles, activeIndex);
-
-    refs.showcaseTrack.innerHTML = orderedSlides
-      .map((entry, slotIndex) => renderHomeShowcaseSlide(entry.vehicle, entry.originalIndex, slotIndex, orderedSlides.length))
-      .join("");
-
-    if (refs.showcaseMeta) {
-      refs.showcaseMeta.innerHTML = renderHomeShowcaseMeta(activeVehicle, activeIndex, showcaseVehicles.length);
+  const selectShowcase = (nextIndex) => {
+    if (
+      Number.isNaN(nextIndex)
+      || nextIndex < 0
+      || nextIndex >= showcaseVehicles.length
+      || nextIndex === activeIndex
+    ) {
+      return;
     }
 
-    refs.showcaseTrack.querySelectorAll("[data-home-showcase-index]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const nextIndex = Number(button.dataset.homeShowcaseIndex);
-
-        if (!Number.isNaN(nextIndex)) {
-          activeIndex = nextIndex;
-          renderShowcase();
-          startHomeShowcaseTimer(stepShowcase);
-        }
-      });
-    });
+    activeIndex = nextIndex;
+    renderShowcase();
   };
 
   const stepShowcase = (delta) => {
+    if (showcaseVehicles.length <= 1) {
+      return;
+    }
+
     activeIndex = (activeIndex + delta + showcaseVehicles.length) % showcaseVehicles.length;
     renderShowcase();
   };
 
+  const renderShowcase = () => {
+    const activeVehicle = showcaseVehicles[activeIndex];
+    const mobileViewport = isMobileViewport();
+    const orderedSlides = mobileViewport
+      ? [{ vehicle: activeVehicle, originalIndex: activeIndex }]
+      : getOrderedShowcaseVehicles(showcaseVehicles, activeIndex);
+
+    refs.showcaseTrack.innerHTML = orderedSlides
+      .map((entry, slotIndex) => renderHomeShowcaseSlide(
+        entry.vehicle,
+        entry.originalIndex,
+        slotIndex,
+        orderedSlides.length,
+        { isMobile: mobileViewport }
+      ))
+      .join("");
+    refs.showcaseTrack.dataset.layout = mobileViewport ? "mobile" : "desktop";
+
+    if (refs.showcaseMeta) {
+      refs.showcaseMeta.innerHTML = renderHomeShowcaseMeta(
+        activeVehicle,
+        activeIndex,
+        showcaseVehicles,
+        mobileViewport
+      );
+    }
+
+    refs.showcasePrev?.toggleAttribute("hidden", showcaseVehicles.length <= 1);
+    refs.showcaseNext?.toggleAttribute("hidden", showcaseVehicles.length <= 1);
+  };
+
   renderShowcase();
 
+  const handleShowcaseSelection = (event) => {
+    const trigger = event.target.closest("[data-home-showcase-select]");
+
+    if (!trigger) {
+      return;
+    }
+
+    const nextIndex = Number(trigger.dataset.homeShowcaseSelect);
+    selectShowcase(nextIndex);
+  };
+
+  refs.showcaseTrack.addEventListener("click", handleShowcaseSelection, { signal });
+  refs.showcaseMeta?.addEventListener("click", handleShowcaseSelection, { signal });
+
   if (showcaseVehicles.length > 1) {
+    refs.showcaseSection?.addEventListener(
+      "click",
+      (event) => {
+        if (
+          Date.now() < showcaseSuppressClickUntil
+          && event.target.closest(".home-showcase-image-link")
+        ) {
+          event.preventDefault();
+          showcaseSuppressClickUntil = 0;
+        }
+      },
+      { capture: true, signal }
+    );
+
     refs.showcasePrev?.addEventListener("click", () => {
       stepShowcase(-1);
-      startHomeShowcaseTimer(stepShowcase);
-    });
+    }, { signal });
 
     refs.showcaseNext?.addEventListener("click", () => {
       stepShowcase(1);
-      startHomeShowcaseTimer(stepShowcase);
-    });
+    }, { signal });
 
-    refs.showcaseTrack.addEventListener(
+    refs.showcaseSection?.addEventListener(
       "wheel",
       (event) => {
+        if (isMobileViewport()) {
+          return;
+        }
+
         const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
 
         if (Math.abs(delta) < 16) {
@@ -668,13 +763,84 @@ function renderHomePage(state) {
 
         event.preventDefault();
         stepShowcase(delta > 0 ? 1 : -1);
-        startHomeShowcaseTimer(stepShowcase);
       },
-      { passive: false }
+      { passive: false, signal }
     );
 
-    startHomeShowcaseTimer(stepShowcase);
+    refs.showcaseSection?.addEventListener(
+      "touchstart",
+      (event) => {
+        if (event.touches.length !== 1) {
+          return;
+        }
+
+        showcaseTouchStartX = event.touches[0].clientX;
+        showcaseTouchStartY = event.touches[0].clientY;
+        showcaseSwipeIntent = false;
+      },
+      { passive: true, signal }
+    );
+
+    refs.showcaseSection?.addEventListener(
+      "touchmove",
+      (event) => {
+        if (event.touches.length !== 1 || (!showcaseTouchStartX && !showcaseTouchStartY)) {
+          return;
+        }
+
+        const deltaX = event.touches[0].clientX - showcaseTouchStartX;
+        const deltaY = event.touches[0].clientY - showcaseTouchStartY;
+
+        if (Math.abs(deltaX) > 12 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          showcaseSwipeIntent = true;
+        }
+      },
+      { passive: true, signal }
+    );
+
+    refs.showcaseSection?.addEventListener(
+      "touchend",
+      (event) => {
+        if (event.changedTouches.length !== 1) {
+          return;
+        }
+
+        if (!showcaseTouchStartX && !showcaseTouchStartY) {
+          return;
+        }
+
+        const deltaX = event.changedTouches[0].clientX - showcaseTouchStartX;
+        const deltaY = event.changedTouches[0].clientY - showcaseTouchStartY;
+        showcaseTouchStartX = 0;
+        showcaseTouchStartY = 0;
+
+        if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY)) {
+          showcaseSwipeIntent = false;
+          return;
+        }
+
+        if (showcaseSwipeIntent) {
+          showcaseSuppressClickUntil = Date.now() + 350;
+        }
+
+        stepShowcase(deltaX < 0 ? 1 : -1);
+        showcaseSwipeIntent = false;
+      },
+      { passive: true, signal }
+    );
+
+    refs.showcaseSection?.addEventListener(
+      "touchcancel",
+      () => {
+        showcaseTouchStartX = 0;
+        showcaseTouchStartY = 0;
+        showcaseSwipeIntent = false;
+      },
+      { passive: true, signal }
+    );
   }
+
+  window.addEventListener("alquiloaqui:viewportchange", renderShowcase, { signal });
 
   refs.availableTrack.innerHTML = availableVehicles
     .map((vehicle) => renderHomeAvailableCard(vehicle))
@@ -715,10 +881,6 @@ function renderHomePage(state) {
 function renderCatalogPage(state) {
   const refs = {
     search: document.getElementById("catalogSearch"),
-    minPrice: document.getElementById("catalogMinPrice"),
-    maxPrice: document.getElementById("catalogMaxPrice"),
-    minPriceLabel: document.getElementById("catalogMinPriceLabel"),
-    maxPriceLabel: document.getElementById("catalogMaxPriceLabel"),
     brand: document.getElementById("catalogBrand"),
     transmission: document.getElementById("catalogTransmission"),
     fuel: document.getElementById("catalogFuel"),
@@ -737,7 +899,6 @@ function renderCatalogPage(state) {
   }
 
   const initialFilters = getFiltersFromUrl();
-  const priceBounds = getCatalogPriceBounds(state.vehicles);
 
   refs.brand.innerHTML = buildCatalogSelectOptions(
     getUniqueCatalogValues(state.vehicles, (vehicle) => vehicle.brand),
@@ -780,14 +941,6 @@ function renderCatalogPage(state) {
   );
 
   refs.search.value = initialFilters.search || "";
-  refs.minPrice.min = String(priceBounds.min);
-  refs.minPrice.max = String(priceBounds.max);
-  refs.maxPrice.min = String(priceBounds.min);
-  refs.maxPrice.max = String(priceBounds.max);
-  refs.minPrice.step = "50";
-  refs.maxPrice.step = "50";
-  refs.minPrice.value = String(clampPriceFilter(initialFilters.minPrice, priceBounds.min, priceBounds.max, priceBounds.min));
-  refs.maxPrice.value = String(clampPriceFilter(initialFilters.maxPrice, priceBounds.min, priceBounds.max, priceBounds.max));
   refs.brand.value = initialFilters.brand || "all";
   refs.transmission.value = initialFilters.transmission || "all";
   refs.fuel.value = initialFilters.fuel || "all";
@@ -795,31 +948,9 @@ function renderCatalogPage(state) {
   refs.passengers.value = initialFilters.passengers || "all";
   refs.environmentalTag.value = initialFilters.environmentalTag || "all";
 
-  const syncPriceRange = (source) => {
-    let minValue = Number(refs.minPrice.value);
-    let maxValue = Number(refs.maxPrice.value);
-
-    if (minValue > maxValue) {
-      if (source === "min") {
-        maxValue = minValue;
-        refs.maxPrice.value = String(maxValue);
-      } else {
-        minValue = maxValue;
-        refs.minPrice.value = String(minValue);
-      }
-    }
-
-    refs.minPriceLabel.textContent = formatPriceCompact(minValue);
-    refs.maxPriceLabel.textContent = formatPriceCompact(maxValue);
-  };
-
   const updateCatalog = () => {
-    syncPriceRange();
-
     const filters = {
       search: refs.search.value.trim(),
-      minPrice: Number(refs.minPrice.value),
-      maxPrice: Number(refs.maxPrice.value),
       brand: refs.brand.value,
       transmission: refs.transmission.value,
       fuel: refs.fuel.value,
@@ -829,7 +960,15 @@ function renderCatalogPage(state) {
     };
     const filteredVehicles = getFilteredVehicles(state.vehicles, filters);
     const countLabel = `${filteredVehicles.length} vehiculo${filteredVehicles.length === 1 ? "" : "s"}`;
-    const metaLabel = `Cuotas entre ${formatPriceCompact(filters.minPrice)} y ${formatPriceCompact(filters.maxPrice)} al mes.`;
+    const activeFilterCount = [
+      filters.search,
+      ...["brand", "transmission", "fuel", "category", "passengers", "environmentalTag"]
+        .map((key) => filters[key])
+        .filter((value) => value && value !== "all")
+    ].filter(Boolean).length;
+    const metaLabel = activeFilterCount
+      ? `${activeFilterCount} filtro${activeFilterCount === 1 ? "" : "s"} activo${activeFilterCount === 1 ? "" : "s"}.`
+      : "Usa la busqueda y los filtros para afinar el listado.";
 
     refs.count.textContent = countLabel;
     refs.meta.textContent = metaLabel;
@@ -840,15 +979,13 @@ function renderCatalogPage(state) {
     syncCatalogQuery(filters);
   };
 
-  [refs.search, refs.minPrice, refs.maxPrice, refs.brand, refs.transmission, refs.fuel, refs.category, refs.passengers, refs.environmentalTag].forEach((element) => {
+  [refs.search, refs.brand, refs.transmission, refs.fuel, refs.category, refs.passengers, refs.environmentalTag].forEach((element) => {
     element.addEventListener("input", updateCatalog);
     element.addEventListener("change", updateCatalog);
   });
 
   refs.reset.addEventListener("click", () => {
     refs.search.value = "";
-    refs.minPrice.value = String(priceBounds.min);
-    refs.maxPrice.value = String(priceBounds.max);
     refs.brand.value = "all";
     refs.transmission.value = "all";
     refs.fuel.value = "all";
@@ -858,7 +995,6 @@ function renderCatalogPage(state) {
     updateCatalog();
   });
 
-  syncPriceRange();
   updateCatalog();
 }
 
@@ -977,17 +1113,12 @@ function renderModelPage(state) {
         </div>
 
         ${
-          requestedVehicle.showDescription
+          requestedVehicle.showDescription && requestedVehicle.features.length
             ? `
               <div class="vehicle-detail-description">
-                <p>${escapeHtml(requestedVehicle.summary)}</p>
-                ${
-                  requestedVehicle.features.length
-                    ? `<ul class="vehicle-detail-feature-list">${requestedVehicle.features
-                        .map((feature) => `<li>${escapeHtml(feature)}</li>`)
-                        .join("")}</ul>`
-                    : ""
-                }
+                <ul class="vehicle-detail-feature-list">${requestedVehicle.features
+                  .map((feature) => `<li>${escapeHtml(feature)}</li>`)
+                  .join("")}</ul>
               </div>
             `
             : ""
@@ -1446,8 +1577,11 @@ function renderVehicleCard(vehicle, filters = getFiltersFromUrl()) {
   `;
 }
 
-function renderHomeShowcaseMeta(vehicle, activeIndex, total) {
+function renderHomeShowcaseMeta(vehicle, activeIndex, vehicles, isMobile) {
   const vehicleUrl = buildVehicleUrl(vehicle);
+  const helperCopy = isMobile
+    ? "Desliza el dedo o usa las flechas para cambiar de vehiculo."
+    : "Usa la rueda del raton, los nombres o las flechas para cambiar de vehiculo.";
 
   return `
     <h2>${escapeHtml(vehicle.name)}</h2>
@@ -1456,35 +1590,53 @@ function renderHomeShowcaseMeta(vehicle, activeIndex, total) {
       <strong>${escapeHtml(formatPrice(vehicle.pricePerMonth))}</strong>
       <small>/ mes</small>
     </div>
-    <div class="home-showcase-dots" aria-hidden="true">
-      ${Array.from({ length: total }, (_, index) => `
-        <span class="${index === activeIndex ? "is-active" : ""}"></span>
+    <div class="home-showcase-dots" aria-label="Seleccionar vehiculo destacado">
+      ${vehicles.map((showcaseVehicle, index) => `
+        <button
+          class="${index === activeIndex ? "is-active" : ""}"
+          type="button"
+          data-home-showcase-select="${escapeAttribute(String(index))}"
+          aria-label="${escapeAttribute(`Mostrar ${showcaseVehicle.name}`)}"
+          aria-pressed="${index === activeIndex ? "true" : "false"}"
+        ></button>
       `).join("")}
     </div>
+    <p class="home-showcase-helper">${escapeHtml(helperCopy)}</p>
     <a class="button secondary" href="${escapeAttribute(vehicleUrl)}">Ver detalles</a>
   `;
 }
 
-function renderHomeShowcaseSlide(vehicle, originalIndex, slotIndex, total) {
+function renderHomeShowcaseSlide(vehicle, originalIndex, slotIndex, total, options = {}) {
+  const { isMobile = false } = options;
   const image = getVehicleDisplayImage(vehicle);
+  const vehicleUrl = buildVehicleUrl(vehicle);
   const centerIndex = Math.floor(total / 2);
-  const distance = Math.abs(slotIndex - centerIndex);
+  const distance = isMobile ? 0 : Math.abs(slotIndex - centerIndex);
   const stateClass = distance === 0 ? "is-active" : distance > 1 ? "is-dim" : "";
 
   return `
-    <button
-      class="home-showcase-slide ${stateClass}"
-      type="button"
-      data-home-showcase-index="${escapeAttribute(String(originalIndex))}"
-      aria-label="${escapeAttribute(`Destacar ${vehicle.name}`)}"
-    >
-      <span class="home-showcase-image">
-        <img src="${escapeAttribute(image)}" alt="${escapeAttribute(vehicle.name)}" loading="lazy">
-      </span>
-      <span class="home-showcase-name">
-        ${escapeHtml(vehicle.name)}
-      </span>
-    </button>
+    <article class="home-showcase-slide ${stateClass}${isMobile ? " is-mobile" : ""}">
+      <a
+        class="home-showcase-image-link"
+        href="${escapeAttribute(vehicleUrl)}"
+        aria-label="${escapeAttribute(`Ver detalles de ${vehicle.name}`)}"
+      >
+        <span class="home-showcase-image">
+          <img src="${escapeAttribute(image)}" alt="${escapeAttribute(vehicle.name)}" loading="lazy">
+        </span>
+      </a>
+      ${isMobile ? "" : `
+        <button
+          class="home-showcase-selector"
+          type="button"
+          data-home-showcase-select="${escapeAttribute(String(originalIndex))}"
+          aria-label="${escapeAttribute(`Destacar ${vehicle.name}`)}"
+          aria-pressed="${distance === 0 ? "true" : "false"}"
+        >
+          <span class="home-showcase-name">${escapeHtml(vehicle.name)}</span>
+        </button>
+      `}
+    </article>
   `;
 }
 
@@ -1526,20 +1678,6 @@ function getOrderedShowcaseVehicles(vehicles, activeIndex) {
   });
 }
 
-function startHomeShowcaseTimer(stepShowcase) {
-  clearHomeShowcaseTimer();
-  homeShowcaseTimer = window.setInterval(() => {
-    stepShowcase(1);
-  }, 4800);
-}
-
-function clearHomeShowcaseTimer() {
-  if (homeShowcaseTimer) {
-    window.clearInterval(homeShowcaseTimer);
-    homeShowcaseTimer = 0;
-  }
-}
-
 function getPriceAmountText(value) {
   return formatPrice(value).replace(/\s+/g, "");
 }
@@ -1556,36 +1694,6 @@ function renderEmptyPanel(title, copy) {
       <p>${escapeHtml(copy)}</p>
     </div>
   `;
-}
-
-function getCatalogPriceBounds(vehicles) {
-  const prices = vehicles.map((vehicle) => getVehicleLowestMonthlyPrice(vehicle)).filter((price) => price > 0);
-
-  if (!prices.length) {
-    return { min: 0, max: 2000 };
-  }
-
-  const min = Math.floor(Math.min(...prices) / 50) * 50;
-  const max = Math.ceil(Math.max(...prices) / 50) * 50;
-
-  return {
-    min,
-    max: Math.max(min, max)
-  };
-}
-
-function clampPriceFilter(value, min, max, fallback) {
-  const numericValue = Number(value);
-
-  if (!numericValue) {
-    return fallback;
-  }
-
-  return Math.min(Math.max(numericValue, min), max);
-}
-
-function formatPriceCompact(value) {
-  return `${Math.round(Number(value) || 0)}€`;
 }
 
 function getUniqueCatalogValues(vehicles, getValue, getLabel = (value) => value, sortFn = defaultCatalogValueSort) {
@@ -1640,10 +1748,6 @@ function getFilteredVehicles(vehicles, filters) {
   const normalizedSearch = String(filters.search || "").trim().toLowerCase();
 
   return [...vehicles]
-    .filter((vehicle) => {
-      const monthlyPrice = getVehicleLowestMonthlyPrice(vehicle);
-      return monthlyPrice >= Number(filters.minPrice || 0) && monthlyPrice <= Number(filters.maxPrice || Number.MAX_SAFE_INTEGER);
-    })
     .filter((vehicle) => filters.brand === "all" || vehicle.brand === filters.brand)
     .filter((vehicle) => filters.transmission === "all" || vehicle.transmission === filters.transmission)
     .filter((vehicle) => filters.fuel === "all" || vehicle.fuel === filters.fuel)
@@ -1659,7 +1763,6 @@ function getFilteredVehicles(vehicles, filters) {
         vehicle.brand,
         vehicle.name,
         vehicle.location,
-        vehicle.summary,
         vehicle.transmission,
         vehicle.fuel,
         getTypeLabel(vehicle.type),
@@ -1707,8 +1810,6 @@ function getFiltersFromUrl() {
 
   return {
     search: params.get("q") || "",
-    minPrice: Number(params.get("minPrice")) || 0,
-    maxPrice: Number(params.get("maxPrice")) || 0,
     brand: params.get("brand") || "all",
     transmission: params.get("transmission") || "all",
     fuel: params.get("fuel") || "all",
@@ -1762,14 +1863,6 @@ function buildVehicleUrl(vehicle, filters = {}) {
 function appendCatalogFilterParams(params, filters = {}) {
   if (filters.search) {
     params.set("q", String(filters.search).trim());
-  }
-
-  if (Number(filters.minPrice) > 0) {
-    params.set("minPrice", String(Math.round(Number(filters.minPrice))));
-  }
-
-  if (Number(filters.maxPrice) > 0) {
-    params.set("maxPrice", String(Math.round(Number(filters.maxPrice))));
   }
 
   ["brand", "transmission", "fuel", "category", "passengers", "environmentalTag"].forEach((key) => {

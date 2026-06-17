@@ -1172,7 +1172,7 @@ function renderModelPage(state) {
           requestedVehicle.showCoverage
             ? `
               <div class="vehicle-quote-section">
-                <h2>Cobertura a todo riesgo</h2>
+                <h2>Cobertura de Riesgo</h2>
                 <div class="vehicle-quote-coverage-grid" id="modelCoverageGrid">
                   ${requestedVehicle.coverageOptions.map((option, index) => renderModelCoverageOption(option, index, index === initialCoverageIndex)).join("")}
                 </div>
@@ -1184,12 +1184,6 @@ function renderModelPage(state) {
         <p class="vehicle-quote-availability-copy" id="modelAvailabilityCopy">
           ${escapeHtml(getModelAvailabilityCopy(initialAvailability, filters.start, initialTermKey, requestedVehicle.showCoverage))}
         </p>
-
-        <ul class="vehicle-quote-benefits">
-          <li>Sin entrada inicial</li>
-          <li>100% Flexible</li>
-          <li>Mantenimiento incluido</li>
-        </ul>
 
         <a class="button primary full" id="modelWhatsappLink" href="${escapeAttribute(initialWhatsappUrl)}" target="_blank" rel="noreferrer">
           Reservar mi coche

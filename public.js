@@ -463,6 +463,7 @@ function normalizeVehicle(vehicle) {
 
   return {
     id: String(sourceVehicle.id || ""),
+    catalogPresetLocked: sourceVehicle.catalogPresetLocked === true,
     versionLabel: String(
       sourceVehicle.versionLabel
         || sourceVehicle.version
@@ -529,6 +530,7 @@ function getCatalogVehiclePreset(vehicle) {
 function createCatalogVehicleFromPreset(preset) {
   return {
     ...preset,
+    catalogPresetLocked: true,
     pricePlans: { ...preset.pricePlans },
     mileagePlans: preset.mileagePlans.map((plan) => ({ ...plan })),
     coverageOptions: preset.coverageOptions.map((option) => ({ ...option })),
@@ -540,9 +542,10 @@ function createCatalogVehicleFromPreset(preset) {
 function applyCatalogVehiclePreset(vehicle) {
   const preset = getCatalogVehiclePreset(vehicle);
 
-  if (!preset) {
+  if (!preset || vehicle?.catalogPresetLocked === false) {
     return {
       ...vehicle,
+      catalogPresetLocked: false,
       showCoverage: false
     };
   }
@@ -550,6 +553,7 @@ function applyCatalogVehiclePreset(vehicle) {
   return {
     ...createCatalogVehicleFromPreset(preset),
     ...vehicle,
+    catalogPresetLocked: true,
     id: String(vehicle.id || preset.id),
     name: preset.name,
     versionLabel: String(vehicle.versionLabel || preset.versionLabel || ""),

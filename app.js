@@ -584,6 +584,7 @@ function bindAdminEvents() {
     const existingVehicle = state.data.vehicles.find((item) => item.id === vehicle.id);
 
     if (existingVehicle) {
+      existingVehicle.catalogPresetLocked = vehicle.catalogPresetLocked;
       existingVehicle.name = vehicle.name;
       existingVehicle.versionLabel = vehicle.versionLabel;
       existingVehicle.type = vehicle.type;
@@ -2215,6 +2216,7 @@ function normalizeVehicle(vehicle) {
 
   return {
     id: String(sourceVehicle.id || createId("veh")),
+    catalogPresetLocked: sourceVehicle.catalogPresetLocked === true,
     name: String(sourceVehicle.name || "Vehiculo sin nombre"),
     versionLabel: String(
       sourceVehicle.versionLabel
@@ -2281,6 +2283,7 @@ function getCatalogVehiclePreset(vehicle) {
 function createCatalogVehicleFromPreset(preset) {
   return {
     ...preset,
+    catalogPresetLocked: true,
     pricePlans: { ...preset.pricePlans },
     mileagePlans: preset.mileagePlans.map((plan) => ({ ...plan })),
     coverageOptions: preset.coverageOptions.map((option) => ({ ...option })),
@@ -2292,9 +2295,10 @@ function createCatalogVehicleFromPreset(preset) {
 function applyCatalogVehiclePreset(vehicle) {
   const preset = getCatalogVehiclePreset(vehicle);
 
-  if (!preset) {
+  if (!preset || vehicle?.catalogPresetLocked === false) {
     return {
       ...vehicle,
+      catalogPresetLocked: false,
       showCoverage: false
     };
   }
@@ -2302,6 +2306,7 @@ function applyCatalogVehiclePreset(vehicle) {
   return {
     ...createCatalogVehicleFromPreset(preset),
     ...vehicle,
+    catalogPresetLocked: true,
     id: String(vehicle.id || preset.id),
     name: preset.name,
     versionLabel: String(vehicle.versionLabel || preset.versionLabel || ""),
@@ -2702,6 +2707,7 @@ async function readVehicleForm() {
 
   return {
     id: refs.vehicleId.value || "",
+    catalogPresetLocked: false,
     name: refs.vehicleName.value.trim(),
     versionLabel: refs.vehicleVersionLabel?.value.trim() || "",
     type: refs.vehicleType.value,

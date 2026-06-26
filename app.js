@@ -3307,6 +3307,15 @@ function getVehicleBrandFallback(name) {
   return String(name || "").trim().split(/\s+/)[0] || "";
 }
 
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function sortBlocks(blocks) {
   return [...blocks].sort((left, right) => left.start.localeCompare(right.start));
 }

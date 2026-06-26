@@ -45,6 +45,166 @@ const DEFAULT_COVERAGE_OPTIONS = [
     recommended: false
   }
 ];
+const CATALOG_VEHICLE_PRESETS = [
+  {
+    id: "veh-mpsuw04f-06aglhc",
+    name: "Opel Adam - 2018",
+    versionLabel: "Opel Adam 2018",
+    type: "coche",
+    brand: "Opel",
+    environmentalTag: "C",
+    pricePerMonth: 350,
+    pricePlans: { "1": 390, "6": 360, "12": 350 },
+    location: "Madrid",
+    passengers: 4,
+    transmission: "Manual",
+    fuel: "Gasolina",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Urbano compacto para ciudad y trayectos cortos con aparcamiento facil.",
+    features: ["Bluetooth", "Aire", "Consumo bajo"]
+  },
+  {
+    id: "veh-mpsukpaa-8cvy9to",
+    name: "Citroen C3 - 2015",
+    versionLabel: "Citroen C3 2015",
+    type: "coche",
+    brand: "Citroen",
+    environmentalTag: "C",
+    pricePerMonth: 370,
+    pricePlans: { "1": 420, "6": 390, "12": 370 },
+    location: "Madrid",
+    passengers: 5,
+    transmission: "Manual",
+    fuel: "Gasolina",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Utilitario practico para uso diario con mantenimiento sencillo.",
+    features: ["Aire", "Radio", "Cinco plazas"]
+  },
+  {
+    id: "veh-mpsuzumd-8m9di1p",
+    name: "Peugeot 208 - 2024",
+    versionLabel: "Peugeot 208 2024",
+    type: "coche",
+    brand: "Peugeot",
+    environmentalTag: "C",
+    pricePerMonth: 460,
+    pricePlans: { "1": 520, "6": 480, "12": 460 },
+    location: "Madrid",
+    passengers: 5,
+    transmission: "Manual",
+    fuel: "Gasolina",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Turismo moderno para ciudad y carretera con consumo contenido.",
+    features: ["CarPlay", "Aire", "Pantalla tactil"]
+  },
+  {
+    id: "veh-mo5xdy1i-b3sc0j0",
+    name: "Dacia Dokker 2017",
+    versionLabel: "Dacia Dokker 2017 2 plazas",
+    type: "furgoneta",
+    brand: "Dacia",
+    environmentalTag: "C",
+    pricePerMonth: 420,
+    pricePlans: { "1": 480, "6": 450, "12": 420 },
+    location: "Madrid",
+    passengers: 2,
+    transmission: "Manual",
+    fuel: "Diesel",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Furgoneta compacta para reparto ligero y trabajo urbano.",
+    features: ["Puerta lateral", "Carga util", "Consumo bajo"]
+  },
+  {
+    id: "veh-mnoq1y2d-b1khavq",
+    name: "Citroen Berlingo 2018",
+    versionLabel: "Citroen Berlingo 2018 2 plazas",
+    type: "furgoneta",
+    brand: "Citroen",
+    environmentalTag: "C",
+    pricePerMonth: 450,
+    pricePlans: { "1": 500, "6": 470, "12": 450 },
+    location: "Madrid",
+    passengers: 2,
+    transmission: "Manual",
+    fuel: "Diesel",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Berlingo de trabajo para reparto, herramientas y uso profesional.",
+    features: ["Puerta lateral", "Carga amplia", "Anclajes"]
+  },
+  {
+    id: "veh-mqv7nlkt-mj6sj37",
+    name: "Citroen Berlingo 2021",
+    versionLabel: "Citroen Berlingo 2021",
+    type: "furgoneta",
+    brand: "Citroen",
+    environmentalTag: "C",
+    pricePerMonth: 490,
+    pricePlans: { "1": 560, "6": 520, "12": 490 },
+    location: "Madrid",
+    passengers: 3,
+    transmission: "Manual",
+    fuel: "Diesel",
+    color: "Blanco",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "Version mas reciente para trabajo diario con buen acceso de carga.",
+    features: ["Tres plazas", "Carga amplia", "Puerta lateral"]
+  },
+  {
+    id: "veh-mo5z6cmd-ulrdx0q",
+    name: "Peugeot 5008 2017",
+    versionLabel: "Peugeot 5008 2017 7 plazas",
+    type: "coche",
+    brand: "Peugeot",
+    environmentalTag: "C",
+    pricePerMonth: 540,
+    pricePlans: { "1": 620, "6": 580, "12": 540 },
+    location: "Madrid",
+    passengers: 7,
+    transmission: "Manual",
+    fuel: "Diesel",
+    color: "Azul",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "SUV amplio de siete plazas para familia o desplazamientos largos.",
+    features: ["7 plazas", "Maletero grande", "Camara"]
+  },
+  {
+    id: "veh-mnoq1y2d-wnx5uzh",
+    name: "Peugeot 3008 SUV - 2022",
+    versionLabel: "Peugeot 3008 SUV 2022",
+    type: "suv",
+    brand: "Peugeot",
+    environmentalTag: "C",
+    pricePerMonth: 590,
+    pricePlans: { "1": 690, "6": 640, "12": 590 },
+    location: "Madrid",
+    passengers: 5,
+    transmission: "Automatica",
+    fuel: "Diesel",
+    color: "Azul",
+    mileagePlans: DEFAULT_MILEAGE_PLANS,
+    coverageOptions: DEFAULT_COVERAGE_OPTIONS,
+    summary: "SUV moderno para uso mixto entre ciudad, trabajo y viajes.",
+    features: ["Camara", "CarPlay", "SUV"]
+  }
+];
+const CATALOG_VEHICLE_PRESETS_BY_ID = Object.fromEntries(
+  CATALOG_VEHICLE_PRESETS.map((preset) => [preset.id, preset])
+);
+const CATALOG_VEHICLE_PRESETS_BY_SLUG = Object.fromEntries(
+  CATALOG_VEHICLE_PRESETS.map((preset) => [slugify(preset.name), preset])
+);
 const MODEL_ROUTE_MAP = {
   "veh-mnoq1y2d-wnx5uzh": "peugeot-3008-2022",
   "veh-mnoq1y2d-b1khavq": "citroen-berlingo-van",
@@ -263,7 +423,7 @@ function createFallbackState() {
     settings: {
       whatsappNumber: DEFAULT_WHATSAPP_NUMBER
     },
-    vehicles: []
+    vehicles: CATALOG_VEHICLE_PRESETS.map((preset) => normalizeVehicle(createCatalogVehicleFromPreset(preset)))
   };
 }
 
@@ -279,7 +439,7 @@ function normalizeState(rawState) {
       whatsappNumber:
         normalizeWhatsappNumber(rawState?.settings?.whatsappNumber) || DEFAULT_WHATSAPP_NUMBER
     },
-    vehicles: vehicles.map(normalizeVehicle).filter(Boolean)
+    vehicles: mergeCatalogVehicles(vehicles).map(normalizeVehicle).filter(Boolean)
   };
 }
 
@@ -288,50 +448,132 @@ function normalizeVehicle(vehicle) {
     return null;
   }
 
-  const images = normalizeVehicleImages(vehicle.images, vehicle.image);
-  const legacyDailyPrice = Number(vehicle.pricePerDay);
-  const fallbackMonthlyPrice = Number(vehicle.pricePerMonth) > 0
-    ? Number(vehicle.pricePerMonth)
+  const sourceVehicle = applyCatalogVehiclePreset(vehicle);
+  const images = normalizeVehicleImages(sourceVehicle.images, sourceVehicle.image);
+  const legacyDailyPrice = Number(sourceVehicle.pricePerDay);
+  const fallbackMonthlyPrice = Number(sourceVehicle.pricePerMonth) > 0
+    ? Number(sourceVehicle.pricePerMonth)
     : legacyDailyPrice > 0
       ? legacyDailyPrice * 30
       : 1350;
-  const pricePlans = normalizePricePlans(vehicle.pricePlans, fallbackMonthlyPrice);
-  const mileagePlans = normalizeMileagePlans(vehicle.mileagePlans);
-  const coverageOptions = normalizeCoverageOptions(vehicle.coverageOptions);
+  const pricePlans = normalizePricePlans(sourceVehicle.pricePlans, fallbackMonthlyPrice);
+  const mileagePlans = normalizeMileagePlans(sourceVehicle.mileagePlans);
+  const coverageOptions = normalizeCoverageOptions(sourceVehicle.coverageOptions);
   const normalizedMonthlyPrice = getPreferredMonthlyPrice(pricePlans, fallbackMonthlyPrice);
 
   return {
-    id: String(vehicle.id || ""),
+    id: String(sourceVehicle.id || ""),
     versionLabel: String(
-      vehicle.versionLabel
-        || vehicle.version
-        || `${vehicle.name || "Version"} ${Number(vehicle.passengers) > 0 ? `${Number(vehicle.passengers)} plazas` : ""}`
+      sourceVehicle.versionLabel
+        || sourceVehicle.version
+        || `${sourceVehicle.name || "Version"} ${Number(sourceVehicle.passengers) > 0 ? `${Number(sourceVehicle.passengers)} plazas` : ""}`
     ).trim(),
-    name: String(vehicle.name || "Vehiculo sin nombre"),
-    type: ["coche", "suv", "furgoneta"].includes(vehicle.type) ? vehicle.type : "coche",
-    brand: String(vehicle.brand || getVehicleBrandFallback(vehicle.name)).trim() || "Sin marca",
-    environmentalTag: String(vehicle.environmentalTag || "Sin etiqueta").trim() || "Sin etiqueta",
+    name: String(sourceVehicle.name || "Vehiculo sin nombre"),
+    type: ["coche", "suv", "furgoneta"].includes(sourceVehicle.type) ? sourceVehicle.type : "coche",
+    brand: String(sourceVehicle.brand || getVehicleBrandFallback(sourceVehicle.name)).trim() || "Sin marca",
+    environmentalTag: String(sourceVehicle.environmentalTag || "Sin etiqueta").trim() || "Sin etiqueta",
     pricePerMonth: normalizedMonthlyPrice,
     pricePlans,
-    location: String(vehicle.location || "Sin ubicacion"),
-    passengers: Number(vehicle.passengers) > 0 ? Number(vehicle.passengers) : 5,
-    transmission: String(vehicle.transmission || "Manual"),
-    fuel: String(vehicle.fuel || "Gasolina"),
-    color: String(vehicle.color || "No especificado"),
+    location: String(sourceVehicle.location || "Sin ubicacion"),
+    passengers: Number(sourceVehicle.passengers) > 0 ? Number(sourceVehicle.passengers) : 5,
+    transmission: String(sourceVehicle.transmission || "Manual"),
+    fuel: String(sourceVehicle.fuel || "Gasolina"),
+    color: String(sourceVehicle.color || "No especificado"),
     mileagePlans,
     coverageOptions,
     image: images[0] || "",
     images,
-    showAsAvailable: vehicle.showAsAvailable !== false,
-    showDescription: vehicle.showDescription !== false,
-    showCoverage: vehicle.showCoverage !== false,
-    summary: String(vehicle.summary || ""),
-    features: Array.isArray(vehicle.features)
-      ? vehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
+    showAsAvailable: sourceVehicle.showAsAvailable !== false,
+    showDescription: sourceVehicle.showDescription !== false,
+    showCoverage: false,
+    summary: String(sourceVehicle.summary || ""),
+    features: Array.isArray(sourceVehicle.features)
+      ? sourceVehicle.features.map((feature) => String(feature).trim()).filter(Boolean)
       : [],
-    blocks: Array.isArray(vehicle.blocks)
-      ? vehicle.blocks.map(normalizeBlock).filter(Boolean).sort(sortBlocks)
+    blocks: Array.isArray(sourceVehicle.blocks)
+      ? sourceVehicle.blocks.map(normalizeBlock).filter(Boolean).sort(sortBlocks)
       : []
+  };
+}
+
+function mergeCatalogVehicles(vehicles) {
+  const source = Array.isArray(vehicles) ? [...vehicles] : [];
+  const matchedPresetIds = new Set();
+
+  source.forEach((vehicle) => {
+    const preset = getCatalogVehiclePreset(vehicle);
+
+    if (preset?.id) {
+      matchedPresetIds.add(preset.id);
+    }
+  });
+
+  CATALOG_VEHICLE_PRESETS.forEach((preset) => {
+    if (!matchedPresetIds.has(preset.id)) {
+      source.push(createCatalogVehicleFromPreset(preset));
+    }
+  });
+
+  return source;
+}
+
+function getCatalogVehiclePreset(vehicle) {
+  if (vehicle?.id && CATALOG_VEHICLE_PRESETS_BY_ID[vehicle.id]) {
+    return CATALOG_VEHICLE_PRESETS_BY_ID[vehicle.id];
+  }
+
+  const slug = slugify(vehicle?.name || "");
+  return CATALOG_VEHICLE_PRESETS_BY_SLUG[slug] || null;
+}
+
+function createCatalogVehicleFromPreset(preset) {
+  return {
+    ...preset,
+    pricePlans: { ...preset.pricePlans },
+    mileagePlans: preset.mileagePlans.map((plan) => ({ ...plan })),
+    coverageOptions: preset.coverageOptions.map((option) => ({ ...option })),
+    features: [...preset.features],
+    blocks: []
+  };
+}
+
+function applyCatalogVehiclePreset(vehicle) {
+  const preset = getCatalogVehiclePreset(vehicle);
+
+  if (!preset) {
+    return {
+      ...vehicle,
+      showCoverage: false
+    };
+  }
+
+  return {
+    ...createCatalogVehicleFromPreset(preset),
+    ...vehicle,
+    id: String(vehicle.id || preset.id),
+    name: preset.name,
+    versionLabel: String(vehicle.versionLabel || preset.versionLabel || ""),
+    type: preset.type || vehicle.type,
+    brand: preset.brand || vehicle.brand,
+    environmentalTag: preset.environmentalTag || vehicle.environmentalTag,
+    pricePerMonth: preset.pricePerMonth,
+    pricePlans: { ...preset.pricePlans },
+    location: String(vehicle.location || preset.location || ""),
+    passengers: Number(vehicle.passengers) > 0 ? Number(vehicle.passengers) : preset.passengers,
+    transmission: String(vehicle.transmission || preset.transmission || ""),
+    fuel: String(vehicle.fuel || preset.fuel || ""),
+    color: String(vehicle.color || preset.color || ""),
+    mileagePlans:
+      (Array.isArray(vehicle.mileagePlans) || (vehicle.mileagePlans && typeof vehicle.mileagePlans === "object"))
+        ? vehicle.mileagePlans
+        : preset.mileagePlans.map((plan) => ({ ...plan })),
+    coverageOptions:
+      (Array.isArray(vehicle.coverageOptions) || (vehicle.coverageOptions && typeof vehicle.coverageOptions === "object"))
+        ? vehicle.coverageOptions
+        : preset.coverageOptions.map((option) => ({ ...option })),
+    summary: String(vehicle.summary || preset.summary || ""),
+    features: Array.isArray(vehicle.features) && vehicle.features.length ? vehicle.features : [...preset.features],
+    showCoverage: false
   };
 }
 
@@ -1145,7 +1387,7 @@ function renderModelPage(state) {
         <div class="vehicle-quote-total-card">
           <div>
             <span class="vehicle-quote-total-label">Tu cuota mensual</span>
-            <span class="vehicle-quote-total-subtitle">IVA incluido</span>
+            <span class="vehicle-quote-total-subtitle">+ IVA</span>
             <small id="modelSelectedTermLabel">${escapeHtml(getPricePlanLabel(initialTermKey))}</small>
           </div>
           <div class="vehicle-quote-total-price">
@@ -1932,7 +2174,7 @@ function buildVehicleWhatsappUrl(vehicle, availability, filters, phoneNumber, se
     : getVehicleLowestMonthlyPrice(vehicle);
   const parts = [
     `Hola, quiero consultar el ${vehicle.name}.`,
-    `Cuota publicada: ${formatPrice(selectedPrice)} al mes.`
+    `Cuota publicada: ${formatPrice(selectedPrice)} + IVA al mes.`
   ];
 
   if (filters.start) {

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Google Login Helper</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: #f4f7f8;
+      color: #142531;
+    }
+    .card {
+      width: min(92vw, 560px);
+      padding: 28px;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 18px 50px rgba(20, 37, 49, 0.12);
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 28px;
+    }
+    p {
+      line-height: 1.5;
+    }
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #123b55;
+      color: #fff;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #eef4f5;
+      white-space: pre-wrap;
+    }
+    .ok {
+      background: #e7f6ec;
+      color: #114b22;
+    }
+    .error {
+      background: #fdecea;
+      color: #7a1f1f;
+    }
+    code {
+      font-size: 13px;
+    }
+  </style>
+  <script src="../config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.12.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <main class="card">
+    <h1>Login Google para Firebase</h1>
+    <p>Carrega no botão, aprova o popup da tua conta Google e eu recebo localmente o token necessário para atualizar o catálogo remoto.</p>
+    <button id="loginBtn" type="button">Entrar com Google</button>
+    <div class="status" id="status">Aguardando login...</div>
+    <p><code>Origem local: http://localhost:8000/_auth-helper/</code></p>
+  </main>
+
+  <script>
+    const statusNode = document.getElementById("status");
+    const loginBtn = document.getElementById("loginBtn");
+
+    function setStatus(message, tone = "") {
+      statusNode.textContent = message;
+      statusNode.className = `status${tone ? ` ${tone}` : ""}`;
+    }
+
+    async function sendToken(user) {
+      const idToken = await user.getIdToken(true);
+      const payload = {
+        email: user.email || "",
+        uid: user.uid || "",
+        idToken,
+        capturedAt: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch("http://localhost:8765/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        return payload;
+      } catch (error) {
+        const captureUrl = new URL("http://localhost:8765/capture");
+        captureUrl.searchParams.set("email", payload.email);
+        captureUrl.searchParams.set("uid", payload.uid);
+        captureUrl.searchParams.set("capturedAt", payload.capturedAt);
+        captureUrl.searchParams.set("token", payload.idToken);
+        window.location.href = captureUrl.toString();
+        return payload;
+      }
+    }
+
+    async function initAuth() {
+      const config = window.ALQUILO_AQUI_FIREBASE_CONFIG;
+
+      if (!config) {
+        throw new Error("ALQUILO_AQUI_FIREBASE_CONFIG nao encontrado em config.js");
+      }
+
+      if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+      }
+
+      firebase.auth().languageCode = "pt";
+      return new firebase.auth.GoogleAuthProvider();
+    }
+
+    async function loginWithGoogle() {
+      loginBtn.disabled = true;
+      setStatus("A redirecionar para o login Google...");
+
+      try {
+        const provider = await initAuth();
+        provider.setCustomParameters({ prompt: "select_account" });
+        sessionStorage.setItem("alquiloAquiGoogleRedirect", "1");
+        await firebase.auth().signInWithRedirect(provider);
+      } catch (error) {
+        const message = error?.message || String(error);
+        setStatus(`Falha no login Google:\n${message}`, "error");
+        loginBtn.disabled = false;
+      }
+    }
+
+    loginBtn.addEventListener("click", loginWithGoogle);
+
+    window.addEventListener("load", async () => {
+      try {
+        const provider = await initAuth();
+        provider.setCustomParameters({ prompt: "select_account" });
+        const pendingRedirect = sessionStorage.getItem("alquiloAquiGoogleRedirect") === "1";
+        const result = await firebase.auth().getRedirectResult();
+        const user = result?.user || firebase.auth().currentUser;
+
+        if (user && pendingRedirect) {
+          const payload = await sendToken(user);
+          sessionStorage.removeItem("alquiloAquiGoogleRedirect");
+          setStatus(`Login aprovado para ${payload.email}.\nToken enviado para o helper local.`, "ok");
+          loginBtn.disabled = false;
+          return;
+        }
+
+        setStatus("Aguardando login...");
+        loginBtn.disabled = false;
+      } catch (error) {
+        const message = error?.message || String(error);
+        setStatus(`Falha no retorno do login Google:\n${message}`, "error");
+        loginBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

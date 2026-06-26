@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
     rel="stylesheet"
   >
-  <link rel="stylesheet" href="../styles.css?v=20260427-model1">
+  <link rel="stylesheet" href="../styles.css?v=20260626-sync-auth-fix">
   <style>
     body.page-gestion {
       color: #132534;
@@ -341,7 +341,7 @@
     }
   </style>
   <script src="../config.js" defer></script>
-  <script src="../app.js?v=20260626-vehicle-edit-fix" defer></script>
+  <script src="../app.js?v=20260626-sync-auth-fix" defer></script>
 </head>
 <body class="page-gestion">
   <div class="page-shell">
@@ -616,10 +616,15 @@
         </label>
         <label>
           <span>Clave de gestion</span>
-          <input id="adminPasswordInput" type="password" required placeholder="Introduce la clave">
+          <input id="adminPasswordInput" type="password" required autocomplete="current-password" placeholder="Introduce la clave">
         </label>
         <button class="button button-primary" type="submit">Entrar al panel</button>
       </form>
+
+      <div class="login-divider"><span>o</span></div>
+      <button class="button button-secondary" id="adminGoogleLoginBtn" type="button">
+        Entrar con Google
+      </button>
 
       <p class="helper-text" id="adminLoginMessage">
         Solo el administrador necesita acceso. Los clientes no crean cuenta.

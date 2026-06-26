@@ -292,6 +292,7 @@ function cacheDom() {
   refs.adminLoginModal = document.getElementById("adminLoginModal");
   refs.adminPanelModal = document.getElementById("adminPanelModal");
   refs.adminLoginForm = document.getElementById("adminLoginForm");
+  refs.adminGoogleLoginBtn = document.getElementById("adminGoogleLoginBtn");
   refs.adminPasswordInput = document.getElementById("adminPasswordInput");
   refs.adminLoginMessage = document.getElementById("adminLoginMessage");
   refs.adminLogoutBtn = document.getElementById("adminLogoutBtn");
@@ -484,6 +485,25 @@ function bindAdminEvents() {
     openAdminPanel();
   });
 
+  refs.adminGoogleLoginBtn?.addEventListener("click", async () => {
+    try {
+      const result = await authenticateAdminWithGoogle();
+
+      if (result?.redirecting) {
+        setMessage(refs.adminLoginMessage, "Continuando con Google...", "");
+        return;
+      }
+    } catch (error) {
+      setMessage(refs.adminLoginMessage, getAdminAuthErrorMessage(error), "error");
+      return;
+    }
+
+    state.ui.isAdminAuthenticated = true;
+    setMessage(refs.adminLoginMessage, "");
+    closeLoginModal();
+    openAdminPanel();
+  });
+
   refs.adminLogoutBtn.addEventListener("click", () => {
     state.ui.isAdminAuthenticated = false;
     signOutRemoteAdmin();
@@ -494,6 +514,7 @@ function bindAdminEvents() {
     event.preventDefault();
     const whatsappNumber = normalizeWhatsappNumber(refs.settingsWhatsapp.value);
     const newPassword = refs.settingsPassword.value.trim();
+    const previousState = JSON.stringify(state.data);
 
     if (!whatsappNumber) {
       setMessage(refs.settingsMessage, "Introduce un numero de WhatsApp valido.", "error");
@@ -508,7 +529,17 @@ function bindAdminEvents() {
     }
 
     state.data.settings.whatsappNumber = whatsappNumber;
-    saveState();
+    try {
+      await saveStateOrThrow();
+    } catch (error) {
+      state.data = normalizeState(JSON.parse(previousState));
+      syncGlobalWhatsappLinks();
+      renderPublic();
+      renderAdmin();
+      setMessage(refs.settingsMessage, getAdminAuthErrorMessage(error), "error");
+      return;
+    }
+
     refs.settingsPassword.value = "";
     syncGlobalWhatsappLinks();
     renderPublic();
@@ -617,7 +648,7 @@ function bindAdminEvents() {
     }
 
     try {
-      saveState({
+      await saveStateOrThrow({
         allowMissingImageVehicleIds:
           vehicle.id && state.ui.currentVehicleImagesDirty && !vehicle.images.length
             ? [vehicle.id]
@@ -657,7 +688,7 @@ function bindAdminEvents() {
     setMessage(refs.vehicleFormMessage, "");
   });
 
-  refs.adminVehicleList.addEventListener("click", (event) => {
+  refs.adminVehicleList.addEventListener("click", async (event) => {
     const editButton = event.target.closest("[data-edit-vehicle]");
     const deleteButton = event.target.closest("[data-delete-vehicle]");
     const focusBlocksButton = event.target.closest("[data-focus-blocks]");
@@ -683,6 +714,7 @@ function bindAdminEvents() {
     if (deleteButton) {
       const vehicleId = deleteButton.getAttribute("data-delete-vehicle");
       const vehicle = findVehicleById(vehicleId);
+      const previousState = JSON.stringify(state.data);
 
       if (!vehicle) {
         return;
@@ -700,7 +732,16 @@ function bindAdminEvents() {
       if (state.ui.blockVehicleId === vehicleId) {
         state.ui.blockVehicleId = state.data.vehicles[0]?.id ?? null;
       }
-      saveState();
+      try {
+        await saveStateOrThrow();
+      } catch (error) {
+        state.data = normalizeState(JSON.parse(previousState));
+        renderPublic();
+        renderAdmin();
+        setMessage(refs.vehicleFormMessage, getAdminAuthErrorMessage(error), "error");
+        return;
+      }
+
       renderPublic();
       renderAdmin();
     }
@@ -711,9 +752,10 @@ function bindAdminEvents() {
     renderBlocksSection();
   });
 
-  refs.blockForm.addEventListener("submit", (event) => {
+  refs.blockForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const vehicle = findVehicleById(refs.blockVehicleSelect.value);
+    const previousState = JSON.stringify(state.data);
 
     if (!vehicle) {
       setMessage(refs.blockFormMessage, "Selecciona un vehiculo.", "error");
@@ -738,13 +780,22 @@ function bindAdminEvents() {
     refs.blockStart.value = "";
     refs.blockEnd.value = "";
     refs.blockNote.value = "";
-    saveState();
+    try {
+      await saveStateOrThrow();
+    } catch (error) {
+      state.data = normalizeState(JSON.parse(previousState));
+      renderPublic();
+      renderAdmin();
+      setMessage(refs.blockFormMessage, getAdminAuthErrorMessage(error), "error");
+      return;
+    }
+
     renderPublic();
     renderAdmin();
     setMessage(refs.blockFormMessage, "Fechas bloqueadas.", "success");
   });
 
-  refs.blockList.addEventListener("click", (event) => {
+  refs.blockList.addEventListener("click", async (event) => {
     const deleteButton = event.target.closest("[data-delete-block]");
 
     if (!deleteButton) {
@@ -754,13 +805,23 @@ function bindAdminEvents() {
     const vehicleId = deleteButton.getAttribute("data-vehicle-id");
     const blockId = deleteButton.getAttribute("data-delete-block");
     const vehicle = findVehicleById(vehicleId);
+    const previousState = JSON.stringify(state.data);
 
     if (!vehicle) {
       return;
     }
 
     vehicle.blocks = vehicle.blocks.filter((block) => block.id !== blockId);
-    saveState();
+    try {
+      await saveStateOrThrow();
+    } catch (error) {
+      state.data = normalizeState(JSON.parse(previousState));
+      renderPublic();
+      renderAdmin();
+      setMessage(refs.blockFormMessage, getAdminAuthErrorMessage(error), "error");
+      return;
+    }
+
     renderPublic();
     renderAdmin();
   });
@@ -1543,6 +1604,15 @@ function renderSyncStatus() {
     return;
   }
 
+  if (state.sync.isConfigured && state.sync.isReady && !state.sync.auth?.currentUser) {
+    setSyncStatusMessage(
+      statusElements,
+      "Firebase conectado solo en lectura. Inicia sesion con Google o con la clave correcta para publicar cambios.",
+      ""
+    );
+    return;
+  }
+
   if (state.sync.status === "saving" || state.sync.isSaving) {
     setSyncStatusMessage(statusElements, "Guardando cambios compartidos...", "");
     return;
@@ -1740,6 +1810,28 @@ function saveState(options = {}) {
   void saveRemoteState(options).catch(() => {});
 }
 
+async function saveStateOrThrow(options = {}) {
+  state.sync.pendingRemoteSaveOptions = normalizeRemoteSaveOptions(options);
+
+  try {
+    persistLocalState(state.data);
+  } catch (error) {
+    // Local cache must never block Firebase persistence or the admin workflow.
+  }
+
+  if (state.sync.isConfigured) {
+    await state.sync.initPromise;
+
+    if (!state.sync.databaseRef || !state.sync.isReady) {
+      const error = new Error("Firebase aun no esta listo para guardar cambios.");
+      error.code = "sync/not-ready";
+      throw error;
+    }
+  }
+
+  await saveRemoteState(options);
+}
+
 function persistLocalState(data) {
   const normalizedState = normalizeState(data);
 
@@ -1802,7 +1894,11 @@ async function initRemoteSync() {
     }
 
     state.sync.auth = window.firebase.auth();
+    state.sync.auth.onAuthStateChanged(handleRemoteAuthStateChanged);
     state.sync.databaseRef = window.firebase.database().ref(FIREBASE_DATABASE_PATH);
+    void state.sync.auth.getRedirectResult().catch((error) => {
+      setMessage(refs.adminLoginMessage, getAdminAuthErrorMessage(error), "error");
+    });
     state.sync.databaseRef.on("value", handleRemoteSnapshot, handleRemoteError);
   } catch (error) {
     state.sync.status = "error";
@@ -1867,6 +1963,8 @@ async function saveRemoteState(options = {}) {
     renderSyncStatus();
     return;
   }
+
+  await ensureAuthorizedRemoteAdmin();
 
   const mergedState = mergeStateForRemoteWrite(state.data, state.sync.lastRemoteState, normalizedOptions);
   state.data = mergedState;
@@ -2087,10 +2185,50 @@ async function authenticateAdmin(password) {
   }
 
   await state.sync.auth.signInWithEmailAndPassword(adminEmail, password);
+  await ensureAuthorizedRemoteAdmin();
 
   if (state.sync.isRemoteEmpty || state.sync.hasPendingLocalSave) {
     await saveRemoteState({ force: true });
   }
+}
+
+async function authenticateAdminWithGoogle() {
+  if (!state.sync.isConfigured) {
+    const error = new Error("El acceso con Google solo esta disponible cuando Firebase esta activo.");
+    error.code = "auth/google-not-available";
+    throw error;
+  }
+
+  await state.sync.initPromise;
+
+  if (!state.sync.auth || !window.firebase?.auth?.GoogleAuthProvider) {
+    throw new Error("No se pudo conectar con Firebase Auth.");
+  }
+
+  const provider = new window.firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  try {
+    await state.sync.auth.signInWithPopup(provider);
+  } catch (error) {
+    if (
+      error?.code === "auth/popup-blocked" ||
+      error?.code === "auth/cancelled-popup-request"
+    ) {
+      await state.sync.auth.signInWithRedirect(provider);
+      return { redirecting: true };
+    }
+
+    throw error;
+  }
+
+  await ensureAuthorizedRemoteAdmin();
+
+  if (state.sync.isRemoteEmpty || state.sync.hasPendingLocalSave) {
+    await saveRemoteState({ force: true });
+  }
+
+  return { redirecting: false };
 }
 
 function signOutRemoteAdmin() {
@@ -2120,6 +2258,69 @@ async function updateAdminPassword(newPassword) {
   await state.sync.auth.currentUser.updatePassword(newPassword);
 }
 
+function handleRemoteAuthStateChanged(user) {
+  if (!state.sync.isConfigured) {
+    return;
+  }
+
+  if (!user) {
+    state.ui.isAdminAuthenticated = false;
+    renderSyncStatus();
+    return;
+  }
+
+  if (!isAuthorizedRemoteAdminUser(user)) {
+    const error = new Error("La cuenta autenticada no tiene permiso para gestionar este catalogo.");
+    error.code = "auth/unauthorized-admin";
+    state.ui.isAdminAuthenticated = false;
+    void state.sync.auth?.signOut().catch(() => {});
+    setMessage(refs.adminLoginMessage, getAdminAuthErrorMessage(error), "error");
+    renderSyncStatus();
+    return;
+  }
+
+  state.ui.isAdminAuthenticated = true;
+  renderSyncStatus();
+}
+
+function isAuthorizedRemoteAdminUser(user = state.sync.auth?.currentUser) {
+  if (!user) {
+    return false;
+  }
+
+  const adminEmail = normalizeAdminEmail(getRemoteAdminEmail());
+  if (!adminEmail) {
+    return true;
+  }
+
+  return normalizeAdminEmail(user.email) === adminEmail;
+}
+
+async function ensureAuthorizedRemoteAdmin() {
+  if (!state.sync.isConfigured) {
+    return;
+  }
+
+  const currentUser = state.sync.auth?.currentUser;
+
+  if (!currentUser) {
+    const error = new Error("Falta iniciar sesion en Firebase para publicar cambios.");
+    error.code = "auth/no-current-user";
+    throw error;
+  }
+
+  if (!isAuthorizedRemoteAdminUser(currentUser)) {
+    await state.sync.auth?.signOut().catch(() => {});
+    const error = new Error("La cuenta autenticada no coincide con el administrador autorizado.");
+    error.code = "auth/unauthorized-admin";
+    throw error;
+  }
+}
+
+function normalizeAdminEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function getAdminAuthErrorMessage(error) {
   const code = error?.code || "";
 
@@ -2133,6 +2334,26 @@ function getAdminAuthErrorMessage(error) {
 
   if (code === "auth/network-request-failed") {
     return "No se pudo conectar. Revisa la conexion e intentalo otra vez.";
+  }
+
+  if (code === "auth/no-current-user") {
+    return "Firebase esta conectado solo en lectura. Entra con Google o con la clave correcta para publicar cambios.";
+  }
+
+  if (code === "auth/unauthorized-admin") {
+    return "La cuenta autenticada no tiene permiso para gestionar este catalogo.";
+  }
+
+  if (code === "auth/popup-closed-by-user") {
+    return "Se cerro la ventana de Google antes de completar el acceso.";
+  }
+
+  if (code === "auth/popup-blocked") {
+    return "El navegador bloqueo la ventana de Google. Permite la ventana emergente e intentalo otra vez.";
+  }
+
+  if (code === "sync/not-ready") {
+    return "Firebase todavia no esta listo para guardar. Espera unos segundos e intentalo otra vez.";
   }
 
   if (code === "auth/requires-recent-login") {

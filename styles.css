@@ -1108,6 +1108,30 @@ body.is-vehicle-detail-view .catalog-section {
   margin-top: 20px;
 }
 
+.login-divider {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.login-divider::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid rgba(0, 64, 128, 0.12);
+  content: "";
+}
+
+.login-divider span {
+  position: relative;
+  padding: 0 10px;
+  color: var(--surface-mid);
+  font-size: 0.84rem;
+  background: rgba(248, 252, 253, 0.96);
+}
+
 .helper-text {
   margin: 14px 0 0;
   min-height: 1.5em;

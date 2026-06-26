@@ -341,7 +341,7 @@
     }
   </style>
   <script src="../config.js" defer></script>
-  <script src="../app.js?v=20260428-availability-flag" defer></script>
+  <script src="../app.js?v=20260626-terms-1-6-12" defer></script>
 </head>
 <body class="page-gestion">
   <div class="page-shell">
@@ -463,7 +463,7 @@
     <main id="inicio">
       <section class="hero">
         <div class="hero-copy">
-          <h1>Coches y furgonetas para 1, 3 o 12 meses.</h1>
+          <h1>Coches y furgonetas para 1, 6 o 12 meses.</h1>
           <p class="hero-text">
             Elige la fecha de inicio, selecciona el plazo y consulta por
             WhatsApp el alquiler mensual que mejor te encaja.
@@ -481,7 +481,7 @@
           </div>
 
           <ul class="hero-points" aria-label="Puntos clave">
-            <li>Plazos de 1 mes, 3 meses y 12 meses o mas</li>
+            <li>Plazos de 1 mes, 6 meses y 12 meses</li>
             <li>Precio mensual visible en cada ficha</li>
             <li>Consulta directa por WhatsApp</li>
           </ul>
@@ -499,8 +499,8 @@
               <span>Duracion</span>
               <select id="filterTerm">
                 <option value="1">1 mes</option>
-                <option value="3">3 meses</option>
-                <option value="12plus">12 meses o mas</option>
+                <option value="6">6 meses</option>
+                <option value="12">12 meses</option>
               </select>
             </label>
             <label>
@@ -523,7 +523,7 @@
           <h2>Catalogo</h2>
           <p>
             Busca por modelo, ciudad o rasgo y consulta el vehiculo que mejor
-            encaje para un alquiler de 1, 3 o 12 meses o mas.
+            encaje para un alquiler de 1, 6 o 12 meses.
           </p>
         </div>
 
@@ -841,24 +841,12 @@
               <input id="vehiclePrice1" data-price-plan-input data-plan-key="1" type="number" min="1" step="1" placeholder="1820">
             </label>
             <label>
-              <span>3 meses</span>
-              <input id="vehiclePrice3" data-price-plan-input data-plan-key="3" type="number" min="1" step="1" placeholder="1685">
-            </label>
-            <label>
               <span>6 meses</span>
               <input id="vehiclePrice6" data-price-plan-input data-plan-key="6" type="number" min="1" step="1" placeholder="1545">
             </label>
             <label>
-              <span>9 meses</span>
-              <input id="vehiclePrice9" data-price-plan-input data-plan-key="9" type="number" min="1" step="1" placeholder="1475">
-            </label>
-            <label>
               <span>12 meses</span>
               <input id="vehiclePrice12" data-price-plan-input data-plan-key="12" type="number" min="1" step="1" placeholder="1420">
-            </label>
-            <label>
-              <span>18 meses</span>
-              <input id="vehiclePrice18" data-price-plan-input data-plan-key="18" type="number" min="1" step="1" placeholder="1380">
             </label>
           </div>
         </section>

@@ -18,17 +18,14 @@ const FIREBASE_CONFIG_KEYS = [
 const DEFAULT_ADMIN_PASSWORD = "AlquiloAqui2026!";
 const MONTHLY_TERMS = {
   "1": { label: "1 mes", months: 1 },
-  "3": { label: "3 meses", months: 3 },
-  "12plus": { label: "12 meses o mas", months: 12 }
+  "6": { label: "6 meses", months: 6 },
+  "12": { label: "12 meses", months: 12 }
 };
-const PRICE_PLAN_KEYS = ["1", "3", "6", "9", "12", "18"];
+const PRICE_PLAN_KEYS = ["1", "6", "12"];
 const PRICE_PLAN_MULTIPLIERS = {
-  "1": 1.32,
-  "3": 1.22,
-  "6": 1.12,
-  "9": 1.07,
-  "12": 1.03,
-  "18": 1
+  "1": 1.28,
+  "6": 1.08,
+  "12": 1
 };
 const DEFAULT_MILEAGE_PLANS = [
   { km: 800, surcharge: 0 },
@@ -155,11 +152,8 @@ function cacheDom() {
   refs.vehicleEnvironmentalTag = document.getElementById("vehicleEnvironmentalTag");
   refs.vehiclePrice = document.getElementById("vehiclePrice");
   refs.vehiclePrice1 = document.getElementById("vehiclePrice1");
-  refs.vehiclePrice3 = document.getElementById("vehiclePrice3");
   refs.vehiclePrice6 = document.getElementById("vehiclePrice6");
-  refs.vehiclePrice9 = document.getElementById("vehiclePrice9");
   refs.vehiclePrice12 = document.getElementById("vehiclePrice12");
-  refs.vehiclePrice18 = document.getElementById("vehiclePrice18");
   refs.vehicleLocation = document.getElementById("vehicleLocation");
   refs.vehiclePassengers = document.getElementById("vehiclePassengers");
   refs.vehicleTransmission = document.getElementById("vehicleTransmission");
@@ -1320,11 +1314,8 @@ function renderAdmin() {
     }
     refs.vehiclePrice.value = String(editingVehicle.pricePerMonth);
     refs.vehiclePrice1.value = getAdminPricePlanValue(editingVehicle, "1");
-    refs.vehiclePrice3.value = getAdminPricePlanValue(editingVehicle, "3");
     refs.vehiclePrice6.value = getAdminPricePlanValue(editingVehicle, "6");
-    refs.vehiclePrice9.value = getAdminPricePlanValue(editingVehicle, "9");
     refs.vehiclePrice12.value = getAdminPricePlanValue(editingVehicle, "12");
-    refs.vehiclePrice18.value = getAdminPricePlanValue(editingVehicle, "18");
     refs.vehicleLocation.value = editingVehicle.location;
     refs.vehiclePassengers.value = String(editingVehicle.passengers);
     refs.vehicleTransmission.value = editingVehicle.transmission;
@@ -2222,8 +2213,8 @@ function normalizeCoverageOptions(rawCoverageOptions) {
 }
 
 function getPreferredMonthlyPrice(pricePlans, fallbackPrice) {
-  if (Number(pricePlans["18"]) > 0) {
-    return Number(pricePlans["18"]);
+  if (Number(pricePlans["12"]) > 0) {
+    return Number(pricePlans["12"]);
   }
 
   const availablePrices = Object.values(pricePlans).filter((value) => Number(value) > 0);
@@ -2275,8 +2266,8 @@ function createDemoVehicles() {
       type: "coche",
       brand: "Seat",
       environmentalTag: "C",
-      pricePerMonth: 1380,
-      pricePlans: { "1": 1820, "3": 1685, "6": 1545, "9": 1475, "12": 1420, "18": 1380 },
+      pricePerMonth: 1420,
+      pricePlans: { "1": 1820, "6": 1545, "12": 1420 },
       location: "Madrid centro",
       passengers: 5,
       transmission: "Manual",
@@ -2303,8 +2294,8 @@ function createDemoVehicles() {
       type: "suv",
       brand: "Peugeot",
       environmentalTag: "ECO",
-      pricePerMonth: 2160,
-      pricePlans: { "1": 2850, "3": 2640, "6": 2420, "9": 2310, "12": 2230, "18": 2160 },
+      pricePerMonth: 2230,
+      pricePlans: { "1": 2850, "6": 2420, "12": 2230 },
       location: "Getafe",
       passengers: 5,
       transmission: "Automatica",
@@ -2326,8 +2317,8 @@ function createDemoVehicles() {
       type: "furgoneta",
       brand: "Citroen",
       environmentalTag: "C",
-      pricePerMonth: 2370,
-      pricePlans: { "1": 3125, "3": 2890, "6": 2645, "9": 2535, "12": 2440, "18": 2370 },
+      pricePerMonth: 2440,
+      pricePlans: { "1": 3125, "6": 2645, "12": 2440 },
       location: "Alcorcon",
       passengers: 3,
       transmission: "Manual",
@@ -2350,8 +2341,8 @@ function createDemoVehicles() {
       type: "furgoneta",
       brand: "Renault",
       environmentalTag: "C",
-      pricePerMonth: 2850,
-      pricePlans: { "1": 3760, "3": 3475, "6": 3180, "9": 3050, "12": 2940, "18": 2850 },
+      pricePerMonth: 2940,
+      pricePlans: { "1": 3760, "6": 3180, "12": 2940 },
       location: "Leganes",
       passengers: 9,
       transmission: "Manual",
@@ -2413,7 +2404,7 @@ function getAvailableHint(availability, filters) {
     return `Proximo bloqueo ${formatDateRange(availability.nextBlock.start, availability.nextBlock.end)}.`;
   }
 
-  return "Selecciona inicio y plazo: 1 mes, 3 meses o 12 meses o mas.";
+  return "Selecciona inicio y plazo: 1 mes, 6 meses o 12 meses.";
 }
 
 function getUnavailableHint(availability, filters) {
@@ -2573,7 +2564,7 @@ async function readVehicleForm() {
     type: refs.vehicleType.value,
     brand: refs.vehicleBrand?.value.trim() || getVehicleBrandFallback(refs.vehicleName.value),
     environmentalTag: refs.vehicleEnvironmentalTag?.value || "Sin etiqueta",
-    pricePerMonth: getPreferredMonthlyPrice(pricePlans, Number(refs.vehiclePrice18?.value) || Number(refs.vehiclePrice.value)),
+    pricePerMonth: getPreferredMonthlyPrice(pricePlans, Number(refs.vehiclePrice12?.value) || Number(refs.vehiclePrice.value)),
     pricePlans,
     location: refs.vehicleLocation.value.trim(),
     passengers: Number(refs.vehiclePassengers.value),
@@ -2630,7 +2621,7 @@ function readVehiclePricePlansFromForm() {
     accumulator[key] = Number(input?.value);
     return accumulator;
   }, {});
-  const normalizedPlans = normalizePricePlans(pricePlans, Number(refs.vehiclePrice18?.value) || Number(refs.vehiclePrice.value));
+  const normalizedPlans = normalizePricePlans(pricePlans, Number(refs.vehiclePrice12?.value) || Number(refs.vehiclePrice.value));
 
   if (refs.vehiclePrice) {
     refs.vehiclePrice.value = String(getPreferredMonthlyPrice(normalizedPlans, 0));
@@ -3103,9 +3094,7 @@ function findVehicleById(vehicleId) {
 }
 
 function normalizeRentalFilters() {
-  if (!MONTHLY_TERMS[refs.filterTerm.value]) {
-    refs.filterTerm.value = "1";
-  }
+  refs.filterTerm.value = normalizeMonthlyTermValue(refs.filterTerm.value);
 }
 
 function buildRentalRange(start, termValue) {
@@ -3113,8 +3102,9 @@ function buildRentalRange(start, termValue) {
     return null;
   }
 
+  const normalizedTermValue = normalizeMonthlyTermValue(termValue);
   const startDate = new Date(`${start}T00:00:00`);
-  const endDate = addMonthsKeepingDay(startDate, getMonthlyTermMonths(termValue));
+  const endDate = addMonthsKeepingDay(startDate, getMonthlyTermMonths(normalizedTermValue));
   endDate.setDate(endDate.getDate() - 1);
 
   return {
@@ -3124,11 +3114,27 @@ function buildRentalRange(start, termValue) {
 }
 
 function getMonthlyTermLabel(termValue) {
-  return MONTHLY_TERMS[termValue]?.label || MONTHLY_TERMS["1"].label;
+  return MONTHLY_TERMS[normalizeMonthlyTermValue(termValue)]?.label || MONTHLY_TERMS["1"].label;
 }
 
 function getMonthlyTermMonths(termValue) {
-  return MONTHLY_TERMS[termValue]?.months || MONTHLY_TERMS["1"].months;
+  return MONTHLY_TERMS[normalizeMonthlyTermValue(termValue)]?.months || MONTHLY_TERMS["1"].months;
+}
+
+function normalizeMonthlyTermValue(termValue) {
+  if (termValue === "12plus") {
+    return "12";
+  }
+
+  if (termValue === "3") {
+    return "6";
+  }
+
+  if (termValue === "9" || termValue === "18") {
+    return "12";
+  }
+
+  return MONTHLY_TERMS[termValue] ? termValue : "1";
 }
 
 function formatRentalSelection(range, termValue) {

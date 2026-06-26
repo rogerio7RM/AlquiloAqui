@@ -3,17 +3,14 @@ const DATABASE_PATH = "alquilo-aqui/catalogo";
 const DEFAULT_WHATSAPP_NUMBER = "34604982625";
 const MONTHLY_TERMS = {
   "1": { label: "1 mes", months: 1 },
-  "3": { label: "3 meses", months: 3 },
-  "12plus": { label: "12 meses o mas", months: 12 }
+  "6": { label: "6 meses", months: 6 },
+  "12": { label: "12 meses", months: 12 }
 };
-const PRICE_PLAN_KEYS = ["1", "3", "6", "9", "12", "18"];
+const PRICE_PLAN_KEYS = ["1", "6", "12"];
 const PRICE_PLAN_MULTIPLIERS = {
-  "1": 1.32,
-  "3": 1.22,
-  "6": 1.12,
-  "9": 1.07,
-  "12": 1.03,
-  "18": 1
+  "1": 1.28,
+  "6": 1.08,
+  "12": 1
 };
 const DEFAULT_MODEL_TERM_KEY = "6";
 const MOBILE_VIEWPORT_QUERY = "(max-width: 760px)";
@@ -483,8 +480,8 @@ function normalizeCoverageOptions(rawCoverageOptions) {
 }
 
 function getPreferredMonthlyPrice(pricePlans, fallbackPrice) {
-  if (Number(pricePlans["18"]) > 0) {
-    return Number(pricePlans["18"]);
+  if (Number(pricePlans["12"]) > 0) {
+    return Number(pricePlans["12"]);
   }
 
   const availablePrices = Object.values(pricePlans).filter((value) => Number(value) > 0);
@@ -1389,7 +1386,7 @@ function renderModelCoverageOption(option, index, isActive) {
 }
 
 function getInitialModelTermKey(vehicle, filters) {
-  const termFromFilters = filters.term === "12plus" ? "12" : filters.term;
+  const termFromFilters = normalizeMonthlyTermValue(filters.term);
 
   if (Number(vehicle.pricePlans?.[termFromFilters]) > 0) {
     return termFromFilters;
@@ -1399,7 +1396,7 @@ function getInitialModelTermKey(vehicle, filters) {
     return DEFAULT_MODEL_TERM_KEY;
   }
 
-  return PRICE_PLAN_KEYS.find((key) => Number(vehicle.pricePlans?.[key]) > 0) || "18";
+  return PRICE_PLAN_KEYS.find((key) => Number(vehicle.pricePlans?.[key]) > 0) || "12";
 }
 
 function getDefaultCoverageIndex(coverageOptions) {
@@ -1811,7 +1808,7 @@ function getFiltersFromUrl() {
     passengers: params.get("passengers") || "all",
     environmentalTag: params.get("environmentalTag") || "all",
     start: params.get("start") || "",
-    term: params.get("term") || "1"
+    term: normalizeMonthlyTermValue(params.get("term") || "1")
   };
 }
 
@@ -1928,7 +1925,7 @@ function buildGenericWhatsappUrl(phoneNumber) {
 }
 
 function buildVehicleWhatsappUrl(vehicle, availability, filters, phoneNumber, selection = null) {
-  const selectedTermKey = selection?.termKey || (filters.term === "12plus" ? "12" : filters.term || "1");
+  const selectedTermKey = selection?.termKey || normalizeMonthlyTermValue(filters.term || "1");
   const selectedTermLabel = getPricePlanLabel(selectedTermKey);
   const selectedPrice = Number(selection?.monthlyQuote) > 0
     ? Number(selection.monthlyQuote)
@@ -1993,7 +1990,7 @@ function getVehicleAvailability(vehicle, range) {
 
 function buildRentalRange(startValue, termValue) {
   const normalizedStart = normalizeIsoDate(startValue);
-  const term = MONTHLY_TERMS[termValue];
+  const term = MONTHLY_TERMS[normalizeMonthlyTermValue(termValue)];
 
   if (!normalizedStart || !term) {
     return null;
@@ -2074,7 +2071,23 @@ function createVehiclePlaceholder(vehicle) {
 }
 
 function getMonthlyTermLabel(value) {
-  return MONTHLY_TERMS[value]?.label || MONTHLY_TERMS["1"].label;
+  return MONTHLY_TERMS[normalizeMonthlyTermValue(value)]?.label || MONTHLY_TERMS["1"].label;
+}
+
+function normalizeMonthlyTermValue(termValue) {
+  if (termValue === "12plus") {
+    return "12";
+  }
+
+  if (termValue === "3") {
+    return "6";
+  }
+
+  if (termValue === "9" || termValue === "18") {
+    return "12";
+  }
+
+  return MONTHLY_TERMS[termValue] ? termValue : "1";
 }
 
 function getTypeLabel(value) {
